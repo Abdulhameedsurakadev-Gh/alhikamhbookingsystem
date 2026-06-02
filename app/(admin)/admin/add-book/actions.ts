@@ -3,6 +3,7 @@
 import { CoverType, VolumeType, KnowledgeLevel, TextType, BookImageLabel } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { uploadAsset } from "@/lib/supabase-storage";
 
 export async function createBook(formData: FormData) {
   try {
@@ -15,8 +16,6 @@ export async function createBook(formData: FormData) {
     const publishedYear = formData.get("publishedYear") ? parseInt(formData.get("publishedYear") as string, 10) : null;
     const language = formData.get("language") as string || "Arabic";
     const weight = formData.get("weight") ? parseFloat(formData.get("weight") as string) : null;
-    const coverImage = formData.get("coverImage") as string || null;
-    const insideImage = formData.get("insideImage") as string || null;
     const authorId = formData.get("authorId") as string;
     const categoryId = formData.get("categoryId") as string;
     const volumeCount = parseInt(formData.get("volumeCount") as string, 10) || 1;
@@ -28,12 +27,28 @@ export async function createBook(formData: FormData) {
     const knowledgeLevel = formData.get("knowledgeLevel") as KnowledgeLevel;
     const textType = formData.get("textType") as TextType;
 
-    // Validate required fields
+    // ⚡ CAPTURE RAW FILE BINARY OBJECT DATA FROM FORM INPUTS
+    const coverFile = formData.get("coverImageFile") as File | null;
+    const insideFile = formData.get("insideImageFile") as File | null;
+
     if (!title || isNaN(price) || isNaN(stock) || !publisher || !authorId || !categoryId) {
       return { success: false, error: "Missing or invalid required fields" };
     }
 
-    // Write record to database using schema relation patterns
+    let finalCoverUrl: string | null = null;
+    let finalPreviewUrl: string | null = null;
+
+    // 1. Process and upload the core cover image binary if attached
+    if (coverFile && coverFile.size > 0 && coverFile.name !== "undefined") {
+      finalCoverUrl = await uploadAsset(coverFile, "covers");
+    }
+
+    // 2. Process and upload the inside preview sample page binary if attached
+    if (insideFile && insideFile.size > 0 && insideFile.name !== "undefined") {
+      finalPreviewUrl = await uploadAsset(insideFile, "previews");
+    }
+
+    // 3. Complete structural entry logging into Supabase PostgreSQL via Prisma
     await prisma.book.create({
       data: {
         title,
@@ -45,8 +60,8 @@ export async function createBook(formData: FormData) {
         publishedYear,
         language,
         weight,
-        coverImage, // Saved safely directly on the Book record
         tableOfContents,
+        coverImage: finalCoverUrl, // Saves the permanent storage string URL path directly
         authorId,
         categoryId,
         coverType,
@@ -56,10 +71,10 @@ export async function createBook(formData: FormData) {
         textType,
         explainsBookId: explainsBookId || null,
         
-        // FIX: Map inside samples directly into your schema's BookImage model array 
-        images: insideImage ? {
+        // Maps inside previews securely directly to your structural secondary relation BookImage array
+        images: finalPreviewUrl ? {
           create: {
-            imageUrl: insideImage,
+            imageUrl: finalPreviewUrl,
             label: BookImageLabel.SAMPLE_PAGE,
             sortOrder: 1,
           }
@@ -67,14 +82,13 @@ export async function createBook(formData: FormData) {
       },
     });
 
-    // Revalidate relevant view layouts instantly
     revalidatePath("/admin");
     revalidatePath("/admin/add-book");
-    revalidatePath("/admin/manage-inventory"); // Clear cache for inventory grid listings
+    revalidatePath("/admin/manage-inventory");
     
-    return { success: true, message: "Book created successfully!" };
+    return { success: true, message: "Manuscript and assets published successfully!" };
   } catch (error: any) {
-    console.error("Error creating book:", error);
-    return { success: false, error: error.message || "Something went wrong." };
+    console.error("Fulfillment engine failure:", error);
+    return { success: false, error: error.message || "Failed to finalize asset registry." };
   }
 }

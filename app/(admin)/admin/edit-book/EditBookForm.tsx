@@ -73,7 +73,7 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
         </div>
       )}
 
-      <form action={handleSubmit} className="space-y-6">
+      <form action={handleSubmit}  className="space-y-6">
         {/* Core Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -361,14 +361,15 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Cover Image URL
+              Replace Cover Image
             </label>
             <input
-              type="url"
-              name="coverImage"
-              defaultValue={book.coverImage}
+              type="File"
+              name="coverImageFile"
+              accept="image/*"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
+            {book.coverImage && <p className="text-[10px] text-slate-500 mt-1 truncate">Current: {book.coverImage}</p>}
           </div>
 
           <div>
@@ -376,11 +377,12 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
               Inside Preview Image URL
             </label>
             <input
-              type="url"
-              name="insideImage"
-              defaultValue={book.insideImage}
+              type="File"
+              name="insideImageFile"
+              accept="image/*"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
+            {book.insideImage && <p className="text-[10px] text-slate-500 mt-1 truncate">Current: {book.insideImage}</p>}
           </div>
         </div>
 

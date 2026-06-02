@@ -63,7 +63,7 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
         </div>
       )}
 
-      <form action={handleSubmit} className="space-y-6">
+      <form action={handleSubmit}  className="space-y-6">
         {/* Core Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -347,8 +347,8 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               Cover Image URL
             </label>
             <input
-              type="url"
-              name="coverImage"
+              type="File"
+              name="coverImageFile"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               placeholder="https://..."
             />
@@ -359,8 +359,8 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               Inside Preview Image URL
             </label>
             <input
-              type="url"
-              name="insideImage"
+              type="file"
+              name="insideImageFile"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               placeholder="https://..."
             />

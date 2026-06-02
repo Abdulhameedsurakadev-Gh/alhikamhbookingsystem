@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Book {
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  price           Decimal        @db.Decimal(10, 2)
+  stock           Int            @default(0)
+  publisher       String
+  publishedYear   Int?
+  language        String         @default("Arabic")
+  coverImage      String?
+  authorId        String
+  categoryId      String
+  coverType       CoverType
+  volumeType      VolumeType
+  volumeCount     Int            @default(1)
+  knowledgeLevel  KnowledgeLevel
+  textType        TextType
+  explainsBookId  String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  isbn            String?        @unique
+  weight          Decimal?       @db.Decimal(5, 2)
+  tableOfContents String?
+  author          Author         @relation(fields: [authorId], references: [id])
+  category        Category       @relation(fields: [categoryId], references: [id])
+  explainsBook    Book?          @relation("BookExplanations", fields: [explainsBookId], references: [id])
+  explanations    Book[]         @relation("BookExplanations")
+  images          BookImage[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+}
+
+model BookImage {
+  id        String         @id @default(uuid())
+  imageUrl  String
+  label     BookImageLabel @default(SAMPLE_PAGE)
+  sortOrder Int            @default(0)
+  bookId    String
+  createdAt DateTime       @default(now())
+  book      Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         UserRole @default(CUSTOMER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       Order[]
+  cart         Cart?
+}
+
+model Order {
+  id                String      @id @default(uuid())
+  userId            String
+  totalAmount       Decimal     @db.Decimal(10, 2)
+  status            OrderStatus @default(PENDING)
+  shippingAddress   String
+  phoneNumber       String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  paymentChannel    String?
+  paystackReference String?     @unique
+  user              User        @relation(fields: [userId], references: [id])
+  orderItems        OrderItem[]
+}
+
+model OrderItem {
+  id              String  @id @default(uuid())
+  orderId         String
+  bookId          String
+  quantity        Int     @default(1)
+  priceAtPurchase Decimal @db.Decimal(10, 2)
+  book            Book    @relation(fields: [bookId], references: [id])
+  order           Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// NEW PERSISTENT CART ARCHITECTURE 
+// ==========================================
+model Cart {
+  id     String     @id @default(uuid())
+  userId String     @unique
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+  id       String @id @default(uuid())
+  cartId   String
+  cart     Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  bookId   String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  quantity Int    @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, bookId]) // Guarantees a book only exists once per cart, mutating quantity instead
+}
+
+model Author {
+  id         String  @id @default(uuid())
+  name       String
+  nameArabic String?
+  bio        String?
+  diedAH     Int?
+  books      Book[]
+}
+
+model Category {
+  id       String     @id @default(uuid())
+  name     String
+  slug     String     @unique
+  parentId String?
+  books    Book[]
+  parent   Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[] @relation("SubCategories")
+}
+
+enum BookImageLabel {
+  BACK_COVER
+  TABLE_OF_CONTENTS
+  SAMPLE_PAGE
+  BINDING
+  PUBLISHER_INFO
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum CoverType {
+  AL_GHILAF_AL_WARAQI
+  AL_GHILAF_AL_MUQAWWA
+}
+
+enum VolumeType {
+  KITAB_MUFRAD
+  MAJMUAT_MUJALLADAT
+  MAJMU
+}
+
+enum KnowledgeLevel {
+  MUBTADI
+  MUTAWASSIT
+  MUTAQADDIM
+}
+
+enum TextType {
+  MATN
+  SHARH
+  TAHQIQ
+}

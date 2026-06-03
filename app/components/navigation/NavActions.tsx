@@ -157,7 +157,7 @@ export function NavActions({ categories, session }: NavActionsProps): React.JSX.
             {session ? (
               <div className="pt-3 space-y-2.5 flex flex-col">
                 <span className="text-xs text-slate-400 font-bold uppercase block">Student Session ({session.email})</span>
-                <Link href="/orders" onClick={() => setIsOpen(false)} className="block pl-2 text-slate-600 pt-1">My Orders</Link>
+                <Link href="/account/orders" onClick={() => setIsOpen(false)} className="block pl-2 text-slate-600 pt-1">My Orders</Link>
                 {session.role === "ADMIN" && <Link href="/admin" onClick={() => setIsOpen(false)} className="block pl-2 text-emerald-800 font-bold pt-1">Admin Dashboard</Link>}
                 <button onClick={handleLogout} className="w-full text-left pl-2 text-rose-600 font-bold bg-transparent border-0 pt-2 cursor-pointer">Logout Session</button>
               </div>

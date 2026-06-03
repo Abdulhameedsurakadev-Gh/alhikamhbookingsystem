@@ -17,7 +17,7 @@ export function FeaturedScholars({ scholars }: { scholars: ScholarNode[] }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative z-10">
         <div>
           <h2 className="text-xl sm:text-2xl font-black font-serif text-slate-100 tracking-tight">Featured Islamic Scholars</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Explore classical codex manuals organized directly by their authoritative compilers.</p>
+          <p className="text-xs text-slate-400 mt-0.5">Browse collections organized by renowned scholars and authors whose works have shaped Islamic scholarship.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

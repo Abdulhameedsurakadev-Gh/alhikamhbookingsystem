@@ -3,10 +3,10 @@ import { ShieldCheck, Sparkles, Truck, Lock } from "lucide-react";
 
 export function TrustSection() {
   const points = [
-    { icon: Sparkles, title: "Authentic Texts", desc: "No modified content. Only pristine catalog choices matching the understandings of our noble scholars." },
-    { icon: ShieldCheck, title: "Curated Selection", desc: "Handpicked additions designed directly to streamline structured curriculum development tracks." },
-    { icon: Truck, title: "Nationwide Logistics", desc: "Swift, safe packaging and distribution operations across Kasoa, Accra, and all regions in Ghana." },
-    { icon: Lock, title: "Secure Paystack Gate", desc: "Encrypted credit card and Mobile Money collections with zero local credential persistence." },
+    { icon: Sparkles, title: "Authentic Texts", desc: "Authentic editions sourced from trusted publishers and recognized scholarly traditions." },
+    { icon: ShieldCheck, title: "Curated Selection", desc: "Carefully selected works supporting structured Islamic learning and personal study." },
+    { icon: Truck, title: "Nationwide Logistics", desc: "Reliable delivery across Kasoa, Accra, and selected locations throughout Ghana." },
+    { icon: Lock, title: "Secure Paystack Gate", desc: "Secure payments powered by Paystack, supporting Mobile Money, Visa, and Mastercard." },
   ];
 
   return (

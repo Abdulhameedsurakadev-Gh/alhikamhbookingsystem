@@ -115,7 +115,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
           <span>Continue Browsing</span>
         </Link>
         <Link
-          href="/orders"
+          href="/account/orders"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold text-xs px-6 py-3.5 shadow-md transition cursor-pointer"
         >
           <ClipboardList className="h-4 w-4" />

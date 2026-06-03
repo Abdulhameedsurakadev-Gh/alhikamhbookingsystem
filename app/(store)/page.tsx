@@ -62,7 +62,7 @@ export default async function HomePage() {
       <SubjectChips categories={categories} />
 
       {/* 3. High Recommendation Bestsellers Catalog Row */}
-      <BookGridSection title="Bestselling Recommendation" books={sanitizedFeaturedBooks} />
+      <BookGridSection title="Bestselling Recommendation" title2="Popular titles frequently purchased by students, teachers, and seekers of knowledge." books={sanitizedFeaturedBooks} />
 
       {/* 4. Curriculum Target Study Track System Grid */}
       <StudyLevels />
@@ -71,7 +71,7 @@ export default async function HomePage() {
       <FeaturedScholars scholars={activeScholars} />
 
       {/* 6. Newly Added Manuscripts Block Rows */}
-      <BookGridSection title="New Additions & Manuscripts" books={sanitizedNewBooks} />
+      <BookGridSection title="New Arrivals" title2="Recently added titles from our growing catalog of Islamic works." books={sanitizedNewBooks} />
 
       {/* 7. Platform Assurances & Commercial Trust Badges */}
       <TrustSection />

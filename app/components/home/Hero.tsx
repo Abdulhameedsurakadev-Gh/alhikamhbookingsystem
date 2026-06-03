@@ -26,7 +26,7 @@ export function Hero() {
             </h1>
             
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Discover carefully curated works in Aqeedah, Fiqh, Hadith, Tafsir, Arabic, and other Islamic sciences. Sourced directly from trusted publishers for your research track.
+              Explore authentic works in Aqeedah, Fiqh, Hadith, Tafsir, Arabic Language, Seerah, and other Islamic sciences. Carefully selected from trusted publishers and scholars for students of knowledge.
             </p>
 
             {/* Navigation Button Layout Links */}
@@ -35,13 +35,13 @@ export function Hero() {
                 href="/books" 
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-emerald-950/20 cursor-pointer"
               >
-                <BookOpen className="w-4 h-4" /> Browse Books
+                <BookOpen className="w-4 h-4" /> Browse Library
               </Link>
               <Link 
                 href="#study-tracks" 
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-xl border border-slate-800 transition-all cursor-pointer"
               >
-                <GraduationCap className="w-4 h-4 text-emerald-400" /> Start Learning
+                <GraduationCap className="w-4 h-4 text-emerald-400" /> Explore Curriculum
               </Link>
             </div>
 

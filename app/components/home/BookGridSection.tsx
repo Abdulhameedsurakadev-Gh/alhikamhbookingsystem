@@ -10,12 +10,12 @@ interface GridBookItem {
   authorName: string;
 }
 
-export function BookGridSection({ title, books }: { title: string; books: GridBookItem[] }) {
+export function BookGridSection({ title, title2, books }: { title: string; title2:string; books: GridBookItem[] }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
       <div>
         <h2 className="text-xl sm:text-2xl font-black font-serif text-slate-900 tracking-tight">{title}</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Vetted high-quality prints and translations ready for shipping.</p>
+        <p className="text-xs text-slate-500 mt-0.5">{title2}</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">

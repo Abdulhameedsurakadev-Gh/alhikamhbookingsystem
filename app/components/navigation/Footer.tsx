@@ -49,7 +49,7 @@ export function Footer() {
               <Mail className="w-4 h-4 text-emerald-400" /> Stay Updated On New Arrivals
             </h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Receive scholarly notifications immediately when classical manuscripts, catalog commentaries, or text prints arrive.
+              Be the first to know when new books, commentaries, and featured collections are added to our catalog.
             </p>
           </div>
 
@@ -90,7 +90,7 @@ export function Footer() {
             Al-Hikmah
           </span>
           <p className="text-xs text-slate-500 leading-relaxed font-normal">
-            Authentic Islamic books and classical manuscript prints carefully curated for serious students of knowledge.
+            Providing authentic Islamic books, translations, and scholarly works for students of knowledge throughout Ghana.
           </p>
         </div>
 
@@ -134,7 +134,7 @@ export function Footer() {
             <h5 className="text-xs font-semibold text-slate-800 font-serif">Customer Support</h5>
             <ul className="space-y-2 text-xs font-normal text-slate-500">
               <li><Link href="/about" className="hover:text-emerald-700 transition block">About Our Institution</Link></li>
-              <li><Link href="/contact" className="hover:text-emerald-700 transition block">Contact Us / Support Gate</Link></li>
+              <li><Link href="/contact" className="hover:text-emerald-700 transition block">Contact / Support </Link></li>
               <li><Link href="/shipping" className="hover:text-emerald-700 transition block">Ghana Nationwide Shipping</Link></li>
               <li><Link href="/privacy" className="hover:text-emerald-700 transition block">Data Privacy & Terms</Link></li>
             </ul>
@@ -174,7 +174,7 @@ export function Footer() {
 
         {/* COPYRIGHT MATRICES */}
         <div className="text-center text-[11px] text-slate-400 font-normal tracking-wide pt-4 border-t border-slate-100">
-          &copy; {new Date().getFullYear()} Al-Hikmah Bookstore. All Rights Reserved. Preserving Authentic Classical Knowledge.
+          &copy; {new Date().getFullYear()} Al-Hikmah Bookstore. All Rights Reserved. Connecting Students of Knowledge with Authentic Islamic Books in Ghana.
         </div>
 
       </div>

@@ -105,7 +105,7 @@ export function NavActions({ categories, session }: NavActionsProps): React.JSX.
                     <span>Admin Dashboard</span>
                   </Link>
                 )}
-                <Link href="/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 text-slate-700">
+                <Link href="/account/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 text-slate-700">
                   <ClipboardList className="h-4 w-4 text-slate-400" />
                   <span>My Study Orders</span>
                 </Link>

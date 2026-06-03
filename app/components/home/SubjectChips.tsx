@@ -12,7 +12,7 @@ export function SubjectChips({ categories }: { categories: CategoryNode[] }) {
   return (
     <div className="space-y-4">
       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-1">
-        Browse By Subject Catalog
+        Explore Core Islamic Discipline
       </h3>
       
       {/* Horizontal Scroll Containers on mobile view, structural flex wrap on desktop */}

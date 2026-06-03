@@ -4,16 +4,16 @@ import { ArrowRight, BookMarked, Layers, Award } from "lucide-react";
 
 export function StudyLevels() {
   const levels = [
-    { title: "Beginner (Mubtadi)", slug: "MUBTADI", icon: BookMarked, desc: "Foundational, short manual editions and texts to grasp basic definitions safely.", border: "hover:border-emerald-500", iconColor: "text-emerald-500" },
-    { title: "Intermediate (Mutawassit)", slug: "MUTAWASSIT", icon: Layers, desc: "Expanded explanations (Sharh), variant reasoning models, and textual drill-downs.", border: "hover:border-blue-500", iconColor: "text-blue-500" },
-    { title: "Advanced (Mutaqaddim)", slug: "MUTAQADDIM", icon: Award, desc: "Comparative evaluation literature, deep critical verification text scripts, and multifold volume sets.", border: "hover:border-rose-500", iconColor: "text-rose-500" },
+    { title: "Beginner (Mubtadi)", slug: "MUBTADI", icon: BookMarked, desc: "Foundational texts introducing essential concepts, terminology, and principles.", border: "hover:border-emerald-500", iconColor: "text-emerald-500" },
+    { title: "Intermediate (Mutawassit)", slug: "MUTAWASSIT", icon: Layers, desc: "Detailed commentaries, explanations, and deeper exploration of core subjects.", border: "hover:border-blue-500", iconColor: "text-blue-500" },
+    { title: "Advanced (Mutaqaddim)", slug: "MUTAQADDIM", icon: Award, desc: "Advanced references, comparative works, research texts, and multi-volume collections.", border: "hover:border-rose-500", iconColor: "text-rose-500" },
   ];
 
   return (
     <div id="study-tracks" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 scroll-mt-24">
       <div>
         <h2 className="text-xl sm:text-2xl font-black font-serif text-slate-900 tracking-tight">Structured Curriculums</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Filter the entire bookstore catalog directly matching your structural understanding level.</p>
+        <p className="text-xs text-slate-500 mt-0.5">Discover books according to your current stage of study and academic progression.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

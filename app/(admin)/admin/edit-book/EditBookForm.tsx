@@ -364,7 +364,7 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
               Replace Cover Image
             </label>
             <input
-              type="File"
+              type="text"
               name="coverImageFile"
               accept="image/*"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
@@ -377,7 +377,7 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
               Inside Preview Image URL
             </label>
             <input
-              type="File"
+              type="text"
               name="insideImageFile"
               accept="image/*"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"

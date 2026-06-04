@@ -347,7 +347,7 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               Cover Image URL
             </label>
             <input
-              type="File"
+              type="text"
               name="coverImageFile"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               placeholder="https://..."
@@ -359,7 +359,7 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               Inside Preview Image URL
             </label>
             <input
-              type="file"
+              type="text"
               name="insideImageFile"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               placeholder="https://..."

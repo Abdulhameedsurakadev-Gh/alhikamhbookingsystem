@@ -1,3 +1,4 @@
+// app/(store)/cart/CartClient.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -157,57 +158,13 @@ export function CartClient(): React.JSX.Element {
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">Basket Subtotal</p>
             <p className="text-2xl font-black text-emerald-900 mt-0.5">GH₵ {totalAmount.toFixed(2)}</p>
           </div>
-
-          {/* Navigation Action Links */}
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={async () => {
-                try {
-                  // 1. Client-side protection mapping strategy
-                  // FIXME: Replace this fallback string with your custom active profile session hook (e.g. useAuth)
-                  const activeUserId = "replace-with-active-session-user-id";
-                  
-                  if (!activeUserId || activeUserId === "replace-with-active-session-user-id") {
-                    window.location.href = "/login?redirect=checkout";
-                    return;
-                  }
-
-                  // 2. Map guest items schema matrix cleanly
-                  const cleanGuestPayload = items.map(item => ({
-                    id: item.id,
-                    quantity: item.quantity
-                  }));
-
-                  // 3. Dynamic lazy-load import pattern execution to run server database sync logic securely
-                  const { mergeGuestCartToDatabase } = await import("./actions");
-                  await mergeGuestCartToDatabase(activeUserId, cleanGuestPayload);
-
-                                    // 4. Fire safe redirect path handoff now that the database state holds the payload records
-                  window.location.href = "/checkout";
-
-                } catch (err) {
-                  console.error("Cart transactional sync interruption caught:", err);
-                  window.location.href = "/checkout"; // Safe fallback routing override
-                }
-              }}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold text-sm py-4 shadow-md transition cursor-pointer border-0"
-            >
-              <span>Proceed to Checkout</span>
-            </button>
-            <Link
-              href="/books"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 text-slate-700 font-bold text-xs py-3.5 shadow-3xs transition cursor-pointer"
-            >
-              <ArrowLeft className="h-3.5 w-3.5 text-slate-400" />
-              <span>Continue Shopping</span>
-            </Link>
+          <Link href="/checkout" className="block w-full text-center bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide cursor-pointer">
+            Proceed to Secure Checkout
+          </Link>
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            <span>Local payments secured via Paystack API gateway.</span>
           </div>
-
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 pt-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            <span>Encrypted connection securely handled.</span>
-          </div>
-
         </div>
       </div>
     </div>

@@ -365,8 +365,7 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
             </label>
             <input
               type="text"
-              name="coverImageFile"
-              accept="image/*"
+              name="coverImageUrl"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
             {book.coverImage && <p className="text-[10px] text-slate-500 mt-1 truncate">Current: {book.coverImage}</p>}
@@ -378,8 +377,7 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
             </label>
             <input
               type="text"
-              name="insideImageFile"
-              accept="image/*"
+              name="insideImageUrl"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
             {book.insideImage && <p className="text-[10px] text-slate-500 mt-1 truncate">Current: {book.insideImage}</p>}

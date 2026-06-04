@@ -3,7 +3,6 @@
 import { CoverType, VolumeType, KnowledgeLevel, TextType, BookImageLabel } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { uploadAsset } from "@/lib/supabase-storage";
 
 export async function createBook(formData: FormData) {
   try {
@@ -27,28 +26,19 @@ export async function createBook(formData: FormData) {
     const knowledgeLevel = formData.get("knowledgeLevel") as KnowledgeLevel;
     const textType = formData.get("textType") as TextType;
 
-    // ⚡ CAPTURE RAW FILE BINARY OBJECT DATA FROM FORM INPUTS
-    const coverFile = formData.get("coverImageFile") as File | null;
-    const insideFile = formData.get("insideImageFile") as File | null;
-
     if (!title || isNaN(price) || isNaN(stock) || !publisher || !authorId || !categoryId) {
       return { success: false, error: "Missing or invalid required fields" };
     }
 
-    let finalCoverUrl: string | null = null;
-    let finalPreviewUrl: string | null = null;
+    // 1. Capture dynamic text URL strings directly from your form fields
+    const coverUrlInput = formData.get("coverImageUrl") as string | null;
+    const insideUrlInput = formData.get("insideImageUrl") as string | null;
 
-    // 1. Process and upload the core cover image binary if attached
-    if (coverFile && coverFile.size > 0 && coverFile.name !== "undefined") {
-      finalCoverUrl = await uploadAsset(coverFile, "covers");
-    }
+    // Sanitize values by trimming whitespace; map empty text strings safely to null
+    const finalCoverUrl = coverUrlInput && coverUrlInput.trim() !== "" ? coverUrlInput.trim() : null;
+    const finalPreviewUrl = insideUrlInput && insideUrlInput.trim() !== "" ? insideUrlInput.trim() : null;
 
-    // 2. Process and upload the inside preview sample page binary if attached
-    if (insideFile && insideFile.size > 0 && insideFile.name !== "undefined") {
-      finalPreviewUrl = await uploadAsset(insideFile, "previews");
-    }
-
-    // 3. Complete structural entry logging into Supabase PostgreSQL via Prisma
+    // 2. Complete structural entry logging into database via Prisma
     await prisma.book.create({
       data: {
         title,
@@ -61,7 +51,7 @@ export async function createBook(formData: FormData) {
         language,
         weight,
         tableOfContents,
-        coverImage: finalCoverUrl, // Saves the permanent storage string URL path directly
+        coverImage: finalCoverUrl, // Saves the permanent text URL string directly
         authorId,
         categoryId,
         coverType,
@@ -71,7 +61,7 @@ export async function createBook(formData: FormData) {
         textType,
         explainsBookId: explainsBookId || null,
         
-        // Maps inside previews securely directly to your structural secondary relation BookImage array
+        // Maps inside preview text URLs directly into the relation table structure
         images: finalPreviewUrl ? {
           create: {
             imageUrl: finalPreviewUrl,
@@ -82,11 +72,12 @@ export async function createBook(formData: FormData) {
       },
     });
 
+    // 3. Force revalidation of all inventory cache layers
     revalidatePath("/admin");
     revalidatePath("/admin/add-book");
     revalidatePath("/admin/manage-inventory");
     
-    return { success: true, message: "Manuscript and assets published successfully!" };
+    return { success: true, message: "Manuscript and storage URLs published successfully!" };
   } catch (error: any) {
     console.error("Fulfillment engine failure:", error);
     return { success: false, error: error.message || "Failed to finalize asset registry." };

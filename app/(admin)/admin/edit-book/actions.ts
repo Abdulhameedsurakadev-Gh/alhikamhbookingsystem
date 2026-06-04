@@ -3,7 +3,6 @@
 import { CoverType, VolumeType, KnowledgeLevel, TextType, BookImageLabel } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { uploadAsset, deleteAssetByUrl } from "@/lib/supabase-storage";
 
 export async function updateBook(bookId: string, formData: FormData) {
   try {
@@ -37,35 +36,22 @@ export async function updateBook(bookId: string, formData: FormData) {
       return { success: false, error: "Target manuscript record not found" };
     }
 
-    // 2. Capture dynamic binary file inputs from the multipart form
-    const coverFile = formData.get("coverImageFile") as File | null;
-    const insideFile = formData.get("insideImageFile") as File | null;
-
     if (!title || isNaN(price) || isNaN(stock) || !publisher || !authorId || !categoryId) {
       return { success: false, error: "Missing or invalid required fields" };
     }
 
-    // Default back onto old strings if no replacement files exist
-    let finalCoverUrl: string | null = existingBook.coverImage;
-    let finalPreviewUrl: string | null = existingBook.images.find(img => img.label === BookImageLabel.SAMPLE_PAGE)?.imageUrl || null;
+    // 2. Capture dynamic text URL inputs directly from the form fields
+    const coverUrlInput = formData.get("coverImageUrl") as string | null;
+    const insideUrlInput = formData.get("insideImageUrl") as string | null;
 
-    // A. Handle Cover Image File Replacement and Cleanup
-    if (coverFile && coverFile.size > 0 && coverFile.name !== "undefined") {
-      // Delete old asset from Supabase Storage bucket first to prevent orphaned junk data
-      if (existingBook.coverImage) {
-        await deleteAssetByUrl(existingBook.coverImage);
-      }
-      // Upload fresh file asset stream
-      finalCoverUrl = await uploadAsset(coverFile, "covers");
-    }
+    // Fallback to old strings if fields are left entirely empty
+    const finalCoverUrl = coverUrlInput && coverUrlInput.trim() !== "" 
+      ? coverUrlInput.trim() 
+      : existingBook.coverImage;
 
-    // B. Handle Inside Sample Page File Replacement and Cleanup
-    if (insideFile && insideFile.size > 0 && insideFile.name !== "undefined") {
-      if (finalPreviewUrl) {
-        await deleteAssetByUrl(finalPreviewUrl);
-      }
-      finalPreviewUrl = await uploadAsset(insideFile, "previews");
-    }
+    const finalPreviewUrl = insideUrlInput && insideUrlInput.trim() !== "" 
+      ? insideUrlInput.trim() 
+      : existingBook.images.find(img => img.label === BookImageLabel.SAMPLE_PAGE)?.imageUrl || null;
 
     // 3. Update primary core database entry fields
     await prisma.book.update({
@@ -113,9 +99,9 @@ export async function updateBook(bookId: string, formData: FormData) {
     revalidatePath("/admin");
     revalidatePath("/admin/manage-inventory");
     
-    return { success: true, message: "Manuscript variations and storage buckets synced successfully!" };
+    return { success: true, message: "Manuscript text URLs updated successfully!" };
   } catch (error: any) {
-    console.error("Critical error running edit transaction cleanup:", error);
+    console.error("Critical error running edit text transaction:", error);
     return { success: false, error: error.message || "Failed to finalize database asset values." };
   }
 }

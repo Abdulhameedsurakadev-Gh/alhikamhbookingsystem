@@ -79,18 +79,31 @@ export async function mergeGuestCartToDatabase(userId: string, guestItems: { id:
     cart = await prisma.cart.create({ data: { userId } });
   }
 
-  // Execute processing in parallel batches for optimization velocity
   await Promise.all(
     guestItems.map(async (item) => {
+      // 1. Fetch live stock parameters
       const book = await prisma.book.findUnique({ where: { id: item.id }, select: { stock: true } });
       if (!book || book.stock <= 0) return;
 
-      const targetQuantity = Math.min(item.quantity, book.stock);
+      // 2. Look up if this item already exists in the user's database cart
+      const existingCartItem = await prisma.cartItem.findUnique({
+        where: {
+          cartId_bookId: { cartId: cart!.id, bookId: item.id }
+        }
+      });
 
+      // 3. Compute the combined total safely (Database current + Guest new)
+      const currentDbQuantity = existingCartItem ? existingCartItem.quantity : 0;
+      const combinedQuantity = currentDbQuantity + item.quantity;
+
+      // 4. Force clamp the aggregate sum so it NEVER exceeds actual store inventory
+      const finalVerifiedQuantity = Math.min(combinedQuantity, book.stock);
+
+      // 5. Upsert using explicit numeric values instead of runtime database increments
       await prisma.cartItem.upsert({
         where: { cartId_bookId: { cartId: cart!.id, bookId: item.id } },
-        update: { quantity: { increment: targetQuantity } }, // Add guest counts onto existing database totals safely
-        create: { cartId: cart!.id, bookId: item.id, quantity: targetQuantity }
+        update: { quantity: finalVerifiedQuantity }, 
+        create: { cartId: cart!.id, bookId: item.id, quantity: finalVerifiedQuantity }
       });
     })
   );

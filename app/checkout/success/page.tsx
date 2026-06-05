@@ -34,6 +34,18 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
     notFound();
   }
 
+  // 🌟 HELPER STRATEGY: Safely unpacks your compiled delimited form address back into a beautiful UI structure
+  let zoneInfo = "";
+  let areaInfo = "";
+  let landmarkInfo = order.shippingAddress; // Fallback to raw if unmatched
+
+  if (order.shippingAddress.includes(" | ")) {
+    const segments = order.shippingAddress.split(" | ");
+    zoneInfo = segments[0]?.replace("Zone: ", "") || "";
+    areaInfo = segments[1]?.replace("Area: ", "") || "";
+    landmarkInfo = segments[2]?.replace("Landmark Details: ", "") || "";
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-8 animate-in fade-in duration-300">
       
@@ -83,10 +95,27 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
         <div className="border-t border-slate-100 pt-3 text-xs space-y-2">
           <div className="flex items-start gap-2 text-slate-600">
             <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
+            <div className="space-y-1 w-full">
               <span className="text-slate-400 font-medium block">Delivery Destination</span>
-              <p className="font-semibold text-slate-800 leading-relaxed">{order.shippingAddress}</p>
-              <p className="font-mono font-bold text-emerald-800 mt-1">{order.phoneNumber}</p>
+              
+              {/* 🌟 PARSED RENDERING: Cleans up data display for delivery riders or customers */}
+              {zoneInfo ? (
+                <div className="space-y-0.5 bg-slate-50 border border-slate-100 rounded-xl p-3 text-slate-800">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Zone / Region</p>
+                  <p className="font-semibold text-slate-900 mb-2">{zoneInfo}</p>
+                  
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Specific Area</p>
+                  <p className="font-semibold text-slate-900 mb-2">{areaInfo}</p>
+                  
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Landmarks / Directions</p>
+                  <p className="font-medium text-slate-700">{landmarkInfo}</p>
+                </div>
+              ) : (
+                <p className="font-semibold text-slate-800 leading-relaxed">{order.shippingAddress}</p>
+              )}
+
+              <p className="text-[10px] uppercase font-bold text-slate-400 pt-1">Contact Number</p>
+              <p className="font-mono font-bold text-emerald-800 text-sm">{order.phoneNumber}</p>
             </div>
           </div>
         </div>

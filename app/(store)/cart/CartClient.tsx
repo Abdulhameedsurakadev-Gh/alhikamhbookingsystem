@@ -1,31 +1,27 @@
+// app/(store)/cart/CartClient.tsx
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCartStore, CartItem } from "../../../store/useCartStore";
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Scale, Loader2, ShieldCheck  } from "lucide-react";
-// 🌟 IMPORT SERVER ACTIONS: Pulls your rock-solid database mutation controllers
-import { syncAndValidateCartItem, removeDatabaseCartItem } from "./actions";
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Scale, ShieldCheck } from "lucide-react";
 
-interface CartClientProps {
-  userId?: string; // Passed from parent server component if user is logged in
-}
-
-export function CartClient({ userId }: CartClientProps): React.JSX.Element {
+export function CartClient(): React.JSX.Element {
+  // Pull states cleanly from your global Zustand state machine
   const items: CartItem[] = useCartStore((state) => state.items);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
   const getTotals = useCartStore((state) => state.getTotals);
 
+  // Strict React 19 Safe Hydration strategy: Avoids cascading renders or setState loop crashes
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
-  const [isSyncing, startTransition] = useTransition();
-  const [syncError, setSyncError] = useState<string>("");
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
+  // Return an isolated loading skeleton during server pass to prevent hydration token errors
   if (!isHydrated) {
     return (
       <div className="min-h-[50vh] flex items-center justify-center">
@@ -35,48 +31,6 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
   }
 
   const { totalAmount, totalWeight, totalItems } = getTotals();
-
-  // 🌟 DYNAMIC SYNCHRONIZATION WRAPPER: Intercepts clicks to mutate local UI AND update PostgreSQL
-  const handleQuantityAdjustment = async (bookId: string, newQty: number, stockLimit: number) => {
-    if (newQty < 1) return;
-    const boundedQty = Math.min(newQty, stockLimit);
-    
-    // Update local memory state instantly for fluid UX
-    updateQuantity(bookId, boundedQty);
-
-    // If authenticated, seamlessly send mutation to Postgres database via Server Action
-    if (userId) {
-      startTransition(async () => {
-        try {
-          const res = await syncAndValidateCartItem(userId, bookId, boundedQty);
-          if (!res.success) {
-            setSyncError(res.message || "An unexpected validation anomaly occurred");
-          } else if (res.capped) {
-            // If server stock ran out, align local Zustand memory state with the true capped value
-            updateQuantity(bookId, boundedQty);
-          }
-        } catch (err) {
-          setSyncError("An unexpected error occurred while syncing the cart.");
-          console.error("Cart sync mutation failure:", err);
-        }
-      });
-    }
-  };
-
-  // 🌟 DYNAMIC REMOVAL WRAPPER: Clears item locally and drops the row out of Postgres
-  const handleItemRemoval = async (bookId: string) => {
-    removeItem(bookId);
-
-    if (userId) {
-      startTransition(async () => {
-        try {
-          await removeDatabaseCartItem(userId, bookId);
-        } catch (err) {
-          console.error("Cart deletion sync failure:", err);
-        }
-      });
-    }
-  };
 
   if (items.length === 0) {
     return (
@@ -99,27 +53,11 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16 relative">
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">Student Basket</h1>
-          <p className="text-sm text-slate-500 mt-1">Review your selected volumes and reference materials before checking out.</p>
-        </div>
-        
-        {/* Visual Sync Spinner Anchor */}
-        {isSyncing && (
-          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full animate-in fade-in">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            <span>Syncing database...</span>
-          </div>
-        )}
+    <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      <div>
+        <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">Student Basket</h1>
+        <p className="text-sm text-slate-500 mt-1">Review your selected volumes and reference materials before checking out.</p>
       </div>
-
-      {syncError && (
-        <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-xs font-semibold text-rose-700 animate-in fade-in">
-          ⚠️ {syncError}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side: Items List */}
@@ -165,7 +103,7 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
                   <div className="flex items-center gap-4 justify-between sm:justify-end">
                     <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50 overflow-hidden">
                       <button 
-                        onClick={() => handleQuantityAdjustment(item.id, item.quantity - 1, item.stock)} 
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)} 
                         className="p-2 text-slate-500 hover:bg-slate-100 transition cursor-pointer bg-transparent border-0"
                       >
                         <Minus className="h-3 w-3" />
@@ -174,7 +112,7 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
                         {item.quantity}
                       </span>
                       <button 
-                        onClick={() => handleQuantityAdjustment(item.id, item.quantity + 1, item.stock)} 
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)} 
                         disabled={item.quantity >= item.stock} 
                         className="p-2 text-slate-500 hover:bg-slate-100 transition disabled:opacity-30 cursor-pointer bg-transparent border-0"
                       >
@@ -187,7 +125,7 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
                         GH₵ {(item.price * item.quantity).toFixed(2)}
                       </span>
                       <button 
-                        onClick={() => handleItemRemoval(item.id)} 
+                        onClick={() => removeItem(item.id)} 
                         className="p-2 text-slate-400 hover:text-rose-600 transition rounded-lg hover:bg-rose-50 cursor-pointer bg-transparent border-0"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -201,7 +139,7 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
           </div>
         </div>
 
-                {/* Right Side: Price Summary & Weight Metrics */}
+        {/* Right Side: Price Summary & Weight Metrics */}
         <div className="lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
           <h3 className="font-bold text-sm text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
             Order Summary
@@ -216,25 +154,18 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
               <span className="font-semibold text-slate-800 font-mono">{totalWeight.toFixed(2)} kg</span>
             </div>
           </div>
-          
           <div className="border-t border-slate-100 pt-4">
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wide">Basket Subtotal</p>
             <p className="text-2xl font-black text-emerald-900 mt-0.5">GH₵ {totalAmount.toFixed(2)}</p>
           </div>
-
-          <Link 
-            href="/checkout" 
-            className="block w-full text-center bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide cursor-pointer"
-          >
+          <Link href="/checkout" className="block w-full text-center bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide cursor-pointer">
             Proceed to Secure Checkout
           </Link>
-
-          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 text-center pt-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
-            <span>Stock levels and inventory limits verified in real-time.</span>
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            <span>Local payments secured via Paystack API gateway.</span>
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useCartStore, CartItem } from "../../../store/useCartStore";
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Scale, Loader2 } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Scale, Loader2, ShieldCheck  } from "lucide-react";
 // 🌟 IMPORT SERVER ACTIONS: Pulls your rock-solid database mutation controllers
 import { syncAndValidateCartItem, removeDatabaseCartItem } from "./actions";
 
@@ -50,12 +50,13 @@ export function CartClient({ userId }: CartClientProps): React.JSX.Element {
         try {
           const res = await syncAndValidateCartItem(userId, bookId, boundedQty);
           if (!res.success) {
-            setSyncError(res.message);
+            setSyncError(res.message || "An unexpected validation anomaly occurred");
           } else if (res.capped) {
             // If server stock ran out, align local Zustand memory state with the true capped value
             updateQuantity(bookId, boundedQty);
           }
         } catch (err) {
+          setSyncError("An unexpected error occurred while syncing the cart.");
           console.error("Cart sync mutation failure:", err);
         }
       });

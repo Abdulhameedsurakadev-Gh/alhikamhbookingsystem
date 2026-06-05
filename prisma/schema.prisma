@@ -117,7 +117,7 @@ model Author {
   name       String
   nameArabic String?
   bio        String?
-  diedAH     Int?
+  diedAH     String?
   books      Book[]
 }
 

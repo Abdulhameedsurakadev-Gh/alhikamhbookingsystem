@@ -6,7 +6,7 @@ interface ScholarNode {
   id: string;
   name: string;
   nameArabic: string | null;
-  diedAH: number | null;
+  diedAH: string | null;
 }
 
 export function FeaturedScholars({ scholars }: { scholars: ScholarNode[] }) {

@@ -25,8 +25,8 @@ const SHIPPING_ZONES: ShippingZone[] = [
   },
   {
     id: "winneba-axis",
-    name: "Winneba Road Axis (GH₵20)",
-    fee: 20,
+    name: "Winneba Road Axis (GH₵15)",
+    fee: 15,
     locations: ["Dominasi", "Akoti", "Breku", "Fetteh Kakraba", "Liberia Camp"],
   },
   {
@@ -306,7 +306,7 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
               <span>Verifying checkout info...</span>
             </>
           ) : (
-            <span>Pay GH₵ {grandTotalPayable.toFixed(2)} with Paystack</span>
+            <span>Pay GH₵ {grandTotalPayable.toFixed(2)}</span>
           )}
         </button>
       </div>

@@ -159,11 +159,11 @@ export function CartClient(): React.JSX.Element {
             <p className="text-2xl font-black text-emerald-900 mt-0.5">GH₵ {totalAmount.toFixed(2)}</p>
           </div>
           <Link href="/checkout" className="block w-full text-center bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide cursor-pointer">
-            Proceed to Secure Checkout
+            Proceed to Checkout
           </Link>
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
             <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-            <span>Local payments secured via Paystack API gateway.</span>
+            <span>Local payments secured.</span>
           </div>
         </div>
       </div>

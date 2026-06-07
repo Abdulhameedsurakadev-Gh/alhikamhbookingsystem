@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { registerUserAction } from "../actions";
+import { authClient } from "../../../lib/auth-client"; // Unified client bridge
 import { useCartStore } from "../../../store/useCartStore";
 import { BookOpen, ShieldAlert, Loader2, UserPlus } from "lucide-react";
 
@@ -19,30 +19,49 @@ export default function SignupPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
 
+    // 🛡️ CLIENT SIDE SECURITY PATTERN: Immediate check before firing network logs
     if (password !== confirmPassword) {
       setError("Passwords do not match. Please verify.");
       setLoading(false);
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    // Map guest cart items for potential downstream persistent updates
     const mappedGuestCart = guestItems.map(item => ({
       id: item.id,
       quantity: item.quantity
     }));
 
     try {
-      const res = await registerUserAction(formData, mappedGuestCart);
+      // 🛡️ DIRECT FRONTEND CLIENT REGISTER INVOCATION
+      const { data, error: authError } = await authClient.signUp.email({
+        email: email.trim(),
+        password: password,
+        name: name.trim(),
+      });
 
-      if (!res.success) {
-        setError(res.message);
+      if (authError) {
+        setError(authError.message || "Failed to create account. Email may already be in use.");
         setLoading(false);
-      } else {
-        clearGuestCart();
-        window.location.href = "/cart"; // Redirects straight to your cart after successful registration
+        return;
       }
+
+      // Clear guest client state once successfully authenticated into database
+      clearGuestCart();
+      
+      // Full frame reload forces Next.js 16 to evaluate cookie tokens safely
+      window.location.href = "/cart"; 
     } catch (err) {
       setError("An unexpected error occurred during profile registration.");
       setLoading(false);

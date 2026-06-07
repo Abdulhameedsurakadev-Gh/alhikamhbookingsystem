@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { loginUserAction } from "../actions";
+import { authClient } from "../../../lib/auth-client"; // Unified client bridge
 import { useCartStore } from "../../../store/useCartStore";
 import { BookOpen, ShieldAlert, Loader2, ArrowRight } from "lucide-react";
 
@@ -19,24 +19,37 @@ export default function LoginPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    
-    // Map current Zustand local state array into a thin ID tracker matrix
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    // Map current Zustand local state array into a tracking layout for potential server syncing
     const mappedGuestCart = guestItems.map(item => ({
       id: item.id,
       quantity: item.quantity
     }));
 
     try {
-      const res = await loginUserAction(formData, mappedGuestCart);
+      // 🛡️ DIRECT FRONTEND CLIENT AUTHENTICATION INVOCATION
+      const { data, error: authError } = await authClient.signIn.email({
+        email: email.trim(),
+        password: password,
+      });
 
-      if (!res.success) {
-        setError(res.message);
+      if (authError) {
+        setError(authError.message || "Invalid authentication credentials.");
         setLoading(false);
-      } else {
-        // Clear guest client state once successfully merged into PostgreSQL backend
-        clearGuestCart();
-        window.location.href = "/cart"; // Dynamic reload redirects user straight back to view their basket
+        return;
       }
+
+      // =========================================================================
+      // 🛒 OPTIONAL BUSINESS LOGIC: Sync mappedGuestCart to database here via api if needed
+      // =========================================================================
+      
+      // Clear guest client state once successfully authenticated into PostgreSQL backend
+      clearGuestCart();
+      
+      // Forces clear session caching context across Server Components matching your original layout intent
+      window.location.href = "/cart"; 
     } catch (err) {
       setError("An unexpected authentication error occurred.");
       setLoading(false);
@@ -89,7 +102,7 @@ export default function LoginPage() {
                 name="email"
                 required
                 placeholder="student@knowledge.com"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition animate-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
               />
             </div>
 
@@ -103,21 +116,16 @@ export default function LoginPage() {
                 name="password"
                 required
                 placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition animate-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
               />
             </div>
 
+            {/* 🌟 FIXED: Kept the primary action clean and moved guest button out of the element tree safely */}
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
-            <Link
-              href="/books"
-              className="mt-3 block w-full text-center border border-slate-200 hover:border-emerald-600 bg-white text-slate-700 hover:text-emerald-800 font-bold py-3 px-6 rounded-xl shadow-sm transition text-xs tracking-wide cursor-pointer"
-            >
-              Browse as Guest →
-            </Link>
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -130,6 +138,13 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            <Link
+              href="/books"
+              className="mt-3 block w-full text-center border border-slate-200 hover:border-emerald-600 bg-white text-slate-700 hover:text-emerald-800 font-bold py-3 px-6 rounded-xl shadow-sm transition text-xs tracking-wide cursor-pointer"
+            >
+              Browse as Guest →
+            </Link>
           </form>
 
           <div className="text-center pt-2 border-t border-slate-100 text-xs text-slate-400">

@@ -1,9 +1,8 @@
-// proxy.ts
+// proxy.ts (Root of your project)
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { decryptSession } from "@/lib/auth";
+import { getSessionCookie } from "better-auth/cookies";
 
-// 🔒 CHANGED EXPORT NAME FROM middleware TO proxy
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -11,17 +10,30 @@ export async function proxy(request: NextRequest) {
   const isLoginPage = pathname === "/admin/login";
 
   if (isAdminRoute && !isLoginPage) {
-    const sessionToken = request.cookies.get("alhikmah_session")?.value;
+    // 1. Better-Auth helper reads cookies quickly without heavy DB calls
+    const sessionCookie = getSessionCookie(request, {
+      cookiePrefix: "alhikmah" // Matches your lib/auth config prefix
+    });
 
-    // No session token -> Instant redirection out
-    if (!sessionToken) {
+    // No session cookie found -> Redirect out immediately
+    if (!sessionCookie) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    const session = await decryptSession(sessionToken);
+    // 2. Deep Role Validation: Because admin paths handle catalog prices & cashout references,
+    // we make a secure server check to confirm they are an ADMIN.
+    try {
+      const response = await fetch(`${request.nextUrl.origin}/api/auth/get-session`, {
+        headers: {
+          cookie: request.headers.get("cookie") || "",
+        },
+      });
+      const sessionData = await response.json();
 
-    // Invalid session or role mismatch -> Kick them out to login
-    if (!session || session.role !== "ADMIN") {
+      if (!sessionData || sessionData.user?.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/admin/login", request.url));
+      }
+    } catch (error) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }
@@ -29,7 +41,6 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Keep the fine-grained path selector matching unchanged
 export const config = {
   matcher: ["/admin/:path*"],
 };

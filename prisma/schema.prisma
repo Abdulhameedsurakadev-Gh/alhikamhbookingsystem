@@ -4,7 +4,71 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+ // url      = env("DATABASE_URL") // Added standard data reference target binding
 }
+
+// ==========================================
+// 🛡️ BETTER-AUTH CORE ENGINE SECURITY MODELS
+// ==========================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  role          UserRole  @default(CUSTOMER) // Kept your robust custom enum role access bounds
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relational mappings out to your functional business models
+  orders        Order[]
+  cart          Cart?
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String? // Better-Auth stores credential hashes securely inside this column
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String    @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+}
+
+// ==========================================
+// 📚 ISLAMIC BOOKSTORE MODEL CATALOG ARCHITECTURE
+// ==========================================
 
 model Book {
   id              String         @id @default(uuid())
@@ -48,18 +112,6 @@ model BookImage {
   book      Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  role         UserRole @default(CUSTOMER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  orders       Order[]
-  cart         Cart?
-}
-
 model Order {
   id                String      @id @default(uuid())
   userId            String
@@ -86,30 +138,29 @@ model OrderItem {
 }
 
 // ==========================================
-// NEW PERSISTENT CART ARCHITECTURE 
+// 🛒 PERSISTENT CART ARCHITECTURE 
 // ==========================================
-model Cart {
-  id     String     @id @default(uuid())
-  userId String     @unique
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items  CartItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
-  id       String @id @default(uuid())
-  cartId   String
-  cart     Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  bookId   String
-  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  quantity Int    @default(1)
-
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([cartId, bookId]) // Guarantees a book only exists once per cart, mutating quantity instead
+  @@unique([cartId, bookId])
 }
 
 model Author {
@@ -130,6 +181,10 @@ model Category {
   parent   Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
   children Category[] @relation("SubCategories")
 }
+
+// ==========================================
+// 🏷️ GLOBAL CATALOG SYSTEM ENUMS
+// ==========================================
 
 enum BookImageLabel {
   BACK_COVER

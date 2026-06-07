@@ -1,0 +1,11 @@
+allowBuilds:
+  '@prisma/engines': true
+  esbuild: true
+  msw: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
+
+# 🛡️ v1.0.5 ENGINE RESOLUTION FORCING MAPS
+overrides:
+  kysely: "0.28.17"

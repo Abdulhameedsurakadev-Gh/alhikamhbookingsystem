@@ -1,11 +1,20 @@
 import Link from "next/link";
 import { NavActions } from "./NavActions";
 import { prisma } from "../../../lib/prisma"; 
-import { getServerSession } from "../../../lib/auth";
 
-export async function Navbar() {
-  const session = await getServerSession();
+// 🛡️ UPDATED INTERFACE: Ensuring the custom navbar accepts the Better-Auth session signature passed down from the server layout
+interface NavbarProps {
+  session: {
+    user: {
+      id: string;
+      email: string;
+      name: string | null;
+      role: "CUSTOMER" | "ADMIN";
+    };
+  } | null;
+}
 
+export async function Navbar({ session }: NavbarProps) {
   // 1. Fetch main categories for the taxonomy dropdown
   const categories = await prisma.category.findMany({
     where: { parentId: null }, // Only top-level categories first

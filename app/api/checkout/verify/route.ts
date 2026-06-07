@@ -1,14 +1,15 @@
 // app/api/checkout/verify/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { getServerSession } from "../../../../lib/auth";
+import { auth } from "../../../../lib/auth"; // Imports your official Better-Auth reference
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request): Promise<Response> {
   try {
-    const session = await getServerSession();
-    if (!session) {
+    // 🛡️ BETTER-AUTH CLIENT CALL: Fetch authenticated user safely
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (!session || !session.user) {
       return new NextResponse("Unauthorized user session block.", { status: 401 });
     }
 
@@ -18,14 +19,9 @@ export async function POST(req: Request): Promise<Response> {
       return NextResponse.json({ error: "Missing transaction reference token." }, { status: 400 });
     }
 
-    // =========================================================================
-    // ⚡ FAST DEVELOPMENT BYPASS: Skip network calls, trust reference token, write data
-    // =========================================================================
-    console.log(`📡 Sandbox Mode: Bypassing external network calls for token reference: ${reference}`);
-
     // Fetch user's persistent checkout session cart records from PostgreSQL
     const cart = await prisma.cart.findUnique({
-      where: { userId: session.id },
+      where: { userId: session.user.id }, // Updated to match Better-Auth user ID structure
       include: { items: { include: { book: true } } },
     });
 
@@ -33,60 +29,74 @@ export async function POST(req: Request): Promise<Response> {
       return NextResponse.json({ error: "Active student selection basket is empty." }, { status: 400 });
     }
 
-    // Compute secure totals directly from verified database columns to protect data integrity
+    // Compute secure totals directly from verified database columns
     const calculatedTotal = cart.items.reduce((acc, item) => {
       return acc + (parseFloat(item.book.price.toString()) * item.quantity);
     }, 0);
 
+    // =========================================================================
+    // 🛡️ PAYSTACK HTTPS VERIFICATION GATEWAY CALL
+    // =========================================================================
+    const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+    if (!paystackSecretKey) {
+      return NextResponse.json({ error: "Server payment configuration missing." }, { status: 500 });
+    }
+
+    const paystackResponse = await fetch(`https://paystack.co{reference}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${paystackSecretKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const paystackData = await paystackResponse.json();
+    const expectedAmountInSubunits = Math.round(calculatedTotal * 100);
+
+    if (
+      !paystackData.status || 
+      paystackData.data.status !== "success" || 
+      paystackData.data.amount !== expectedAmountInSubunits
+    ) {
+      return NextResponse.json({ error: "Payment verification failed. Invalid transaction." }, { status: 400 });
+    }
+    // =========================================================================
+
     const itemsToCreate = cart.items.map((item) => ({
       bookId: item.bookId,
       quantity: item.quantity,
-      priceAtPurchase: item.book.price, // Maps straight to your exact schema field Decimals
+      priceAtPurchase: item.book.price, 
     }));
 
-    // Update Database Transactionally (Create Order, Decrement Stock, and Clear Cart rows)
+    // Update Database Transactionally
     const resultOrder = await prisma.$transaction(async (tx) => {
-      // A. Provision the verified Order entry record matching your model naming bounds
       const newOrder = await tx.order.create({
         data: {
-          userId: session.id,
+          userId: session.user.id,
           totalAmount: calculatedTotal,
           paystackReference: reference,
-          paymentChannel: "mobile_money",
+          paymentChannel: paystackData.data.channel || "mobile_money",
           status: "PAID", 
           shippingAddress: `${deliveryData.fullName} | ${deliveryData.address}`,
           phoneNumber: deliveryData.phone,
-          orderItems: {
-            create: itemsToCreate
-          },
+          orderItems: { create: itemsToCreate },
         },
       });
 
-      // B. Loop and safely decrement stock parameters across your books catalog
       for (const item of cart.items) {
         await tx.book.update({
           where: { id: item.bookId },
-          data: {
-            stock: {
-              decrement: item.quantity
-            }
-          }
+          data: { stock: { decrement: item.quantity } }
         });
       }
 
-      // C. Wipe out user cart records now that orders are securely written
-      await tx.cartItem.deleteMany({
-        where: { cartId: cart.id },
-      });
-
+      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
       return newOrder;
     });
 
-    console.log(`✅ Success: Transaction written into Supabase for Order ID: ${resultOrder.id}`);
     return NextResponse.json({ success: true, orderId: resultOrder.id });
 
   } catch (error: any) {
-    console.error("❌ Fatal Order Verification Exception Breakdown Trace:", error);
-    return NextResponse.json({ error: `Verification error: ${error?.message || "Internal error"}` }, { status: 500 });
+    return NextResponse.json({ error: "Internal server processing error." }, { status: 500 });
   }
 }

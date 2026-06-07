@@ -1,21 +1,27 @@
 // app/checkout/page.tsx
 import { redirect } from "next/navigation";
+import { headers } from "next/headers"; // Next.js 16 core headers utility
 import Link from "next/link";
 import { prisma } from "../../lib/prisma";
-import { getServerSession } from "../../lib/auth";
+import { auth } from "../../lib/auth"; // 🌟 FIXED: Swapped out custom hook for official Better-Auth core client
 import { CheckoutForm } from "./CheckoutForm";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage(): Promise<React.JSX.Element> {
-  const session = await getServerSession();
-  if (!session) {
+  // 🛡️ SECURE BETTER-AUTH SERVER INVOCATION: Read active tokens instantly from incoming headers
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session || !session.user) {
     redirect("/login?redirect=checkout");
   }
 
+  // Pull down persistent cart matrix matched strictly to Better-Auth's user ID key framework
   const cart = await prisma.cart.findUnique({
-    where: { userId: session.id },
+    where: { userId: session.user.id },
     include: {
       user: true,
       items: { include: { book: true } }
@@ -48,10 +54,10 @@ export default async function CheckoutPage(): Promise<React.JSX.Element> {
         </Link>
       </div>
 
-      {/* The CheckoutForm now wraps both form inputs and order summary to allow live totals */}
+      {/* The CheckoutForm wraps both form inputs and order summary to allow live totals */}
       <CheckoutForm 
-        userId={session.id} 
-        userEmail={cart.user?.email || "student@alhikmah.com"} 
+        userId={session.user.id} 
+        userEmail={session.user.email || "student@alhikmah.com"} 
         cartItems={formattedItems} 
       />
     </div>

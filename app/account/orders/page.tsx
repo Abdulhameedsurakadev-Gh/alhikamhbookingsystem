@@ -1,8 +1,9 @@
 // app/account/orders/page.tsx
 import { redirect } from "next/navigation";
+import { headers } from "next/headers"; // Next.js 16 core headers utility
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
-import { getServerSession } from "../../../lib/auth";
+import { auth } from "../../../lib/auth"; // 🌟 FIXED: Unified Better-Auth server engine instance
 import { ClipboardList, BookOpen, Calendar, ChevronRight, ShoppingBag } from "lucide-react";
 
 interface Props {
@@ -12,17 +13,20 @@ interface Props {
 export const dynamic = "force-dynamic";
 
 export default async function AccountOrdersPage({ searchParams }: Props): Promise<React.JSX.Element> {
-  // 1. Authenticate user session strictly on the server layer
-  const session = await getServerSession();
-  if (!session) {
+  // 1. Authenticate user session strictly on the server layer using standard request headers
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session || !session.user) {
     redirect("/login?redirect=account/orders");
   }
 
   const params = await searchParams;
   const statusFilter = params.status;
 
-  // 2. Compile conditional where clauses matching valid database enums
-  const whereClause: any = { userId: session.id };
+  // 2. Compile conditional where clauses matching valid database enums against Better-Auth user model keys
+  const whereClause: any = { userId: session.user.id };
   if (statusFilter && ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"].includes(statusFilter)) {
     whereClause.status = statusFilter;
   }

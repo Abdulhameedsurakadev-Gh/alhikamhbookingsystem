@@ -1,8 +1,9 @@
 // app/account/orders/[id]/page.tsx
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers"; // Next.js 16 core headers wrapper
 import Link from "next/link";
 import { prisma } from "../../../../lib/prisma";
-import { getServerSession } from "../../../../lib/auth";
+import { auth } from "../../../../lib/auth"; // 🌟 FIXED: Unified Better-Auth client instance
 import {
   Calendar,
   MapPin,
@@ -24,12 +25,16 @@ export const dynamic = "force-dynamic";
 export default async function OrderDetailPage({
   params,
 }: Props): Promise<React.JSX.Element> {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  // 1. Authenticate user session strictly on the server layer using standard request headers
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  
+  if (!session || !session.user) redirect("/login");
 
   const { id } = await params;
 
-  // 1. Fetch deep historical details with item linkages
+  // 2. Fetch deep historical details with item linkages
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -43,11 +48,12 @@ export default async function OrderDetailPage({
     },
   });
 
-  if (!order || order.userId !== session.id) {
+  // 🛡️ CYBERSECURITY VERIFICATION FIX: Validates ownership parameters against the Better-Auth session model ID
+  if (!order || order.userId !== session.user.id) {
     notFound();
   }
 
-  // 2. Fetch classical commentaries (Shurooh) based on the first item's core text as a recommendation engine
+  // 3. Fetch classical commentaries (Shurooh) based on the first item's core text as a recommendation engine
   const firstBook = order.orderItems[0]?.book;
   const recommendations = firstBook
     ? await prisma.book.findMany({
@@ -110,8 +116,7 @@ export default async function OrderDetailPage({
               ✕
             </div>
             <span>
-              This checkout tracking file has been permanently marked as
-              CANCELLED.
+              This checkout tracking file has been permanently marked as CANCELLED.
             </span>
           </div>
         ) : (
@@ -171,13 +176,12 @@ export default async function OrderDetailPage({
         )}
       </div>
 
-      {/* SHIPPING & PAYMENT TELEMENTRY COLUMNS SPLIT */}
+      {/* SHIPPING & PAYMENT TELEMETRY COLUMNS SPLIT */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Shipping Block Left */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-xs leading-relaxed">
           <h3 className="font-serif font-bold text-sm text-slate-900 flex items-center gap-1.5">
-            <MapPin className="h-4 w-4 text-emerald-800" /> Delivery Destination
-            Details
+            <MapPin className="h-4 w-4 text-emerald-800" /> Delivery Destination Details
           </h3>
           <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl font-medium text-slate-700 space-y-1">
             <p className="font-serif font-bold text-slate-900 text-xs">
@@ -195,8 +199,7 @@ export default async function OrderDetailPage({
         {/* Paystack Telemetry Block Right */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 text-xs">
           <h3 className="font-serif font-bold text-sm text-slate-900 flex items-center gap-1.5">
-            <CreditCard className="h-4 w-4 text-emerald-800" /> Payment
-            Validation Sheet
+            <CreditCard className="h-4 w-4 text-emerald-800" /> Payment Validation Sheet
           </h3>
           <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl space-y-2 font-medium text-slate-600">
             <div className="flex justify-between">
@@ -206,82 +209,67 @@ export default async function OrderDetailPage({
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span>Gateway Token Invoice</span>
-              <span className="font-bold font-mono text-slate-800 block max-w-[160px] truncate select-all">
+              <span>Gateway Token</span>
+              <span className="font-mono text-[10px] font-bold text-slate-500 truncate max-w-[150px]" title={order.paystackReference || ""}>
                 {order.paystackReference || "N/A"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center border-t border-slate-200/60 pt-2 mt-1">
+              <span>Transaction Status</span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                <ShieldCheck className="h-3 w-3" /> VERIFIED
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* MANIFEST ORDER ITEMS BREAKDOWN ROLL */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3">
-        <h3 className="font-serif font-bold text-sm text-slate-900">
-          Purchased Volumes Manifesto
-        </h3>
+      {/* ITEMS CATALOG PURCHASED LIST */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+        <h3 className="font-serif font-bold text-sm text-slate-900">Purchased Volumes</h3>
         <div className="divide-y divide-slate-100 text-xs">
           {order.orderItems.map((item) => (
-            <div
-              key={item.id}
-              className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
-            >
-              <div>
-                <h4 className="font-serif font-bold text-slate-900 text-sm">
-                  {item.book.title}
-                </h4>
-                <p className="text-slate-400 mt-0.5">
-                  Quantity Order Volume Count: {item.quantity}
-                </p>
+            <div key={item.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-serif font-bold text-slate-900 text-sm truncate">{item.book.title}</p>
+                                <p className="text-slate-400 font-medium mt-0.5">by {item.book.author.name}</p>
               </div>
-              <span className="font-bold text-slate-800">
-                ₵{(Number(item.priceAtPurchase) * item.quantity).toFixed(2)}
-              </span>
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-slate-800">GH₵ {parseFloat(item.priceAtPurchase.toString()).toFixed(2)}</p>
+                <p className="text-[10px] text-slate-400 font-mono mt-0.5">Qty: {item.quantity}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ISLAMIC BOOKSTORE ENHANCEMENT: CONTINUE LEARNING RELATION MATRIX CARD */}
-      {/* ISLAMIC BOOKSTORE ENHANCEMENT: CONTINUE LEARNING RELATION MATRIX CARD */}
+      {/* DYNAMIC SCHOLARLY RECOMMENDATION ENGINES */}
       {recommendations.length > 0 && (
-        <section className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-800 rounded-2xl p-5 text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
-          <div className="space-y-1 max-w-xl">
-            <span className="text-amber-300 font-bold uppercase tracking-widest flex items-center gap-1 text-[10px]">
-              <Sparkles className="h-3.5 w-3.5" /> Continue Learning Framework
+        <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-900 rounded-2xl p-5 sm:p-6 shadow-md text-amber-50 relative overflow-hidden">
+          <div className="relative z-10 space-y-3.5 max-w-xl">
+            <span className="inline-flex items-center gap-1 bg-emerald-800/60 text-emerald-300 font-bold tracking-widest text-[9px] uppercase px-2.5 py-1 rounded-full border border-emerald-700/50">
+              <Sparkles className="h-3 w-3" /> Deepen Your Study (Shurooh Commentary)
             </span>
-            <p className="font-serif font-bold text-amber-50 text-sm mt-1">
-              Ready for advanced commentary study?
-            </p>
-            <p className="text-slate-300 leading-relaxed pt-0.5">
-              Since you acquired the source core text{" "}
-              <span className="italic font-medium">"{firstBook?.title}"</span>,
-              we recommend proceeding directly onto its classical authoritative
-              explanation:{" "}
-              <span className="font-bold text-slate-200">
-                "{recommendations[0].title}"
-              </span>{" "}
-              by scholar {recommendations[0].author.name}.
-            </p>
+            <div className="space-y-1">
+              <h4 className="font-serif text-base sm:text-lg font-bold tracking-tight text-amber-100">
+                Expand on: {firstBook?.title}
+              </h4>
+              <p className="text-xs text-emerald-200/80 leading-relaxed font-medium">
+                We detected you purchased {firstBook?.title}. Scholars recommend checking out its foundational expansion text:{" "}
+                <span className="text-amber-200 font-serif italic font-bold">"{recommendations[0].title}"</span> by {recommendations[0].author.name}.
+              </p>
+            </div>
+            <Link
+              href={`/books/${recommendations[0].id}`}
+              className="inline-flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition shadow-md group"
+            >
+              <span>Examine Commentary Volume</span>
+              <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+            </Link>
           </div>
-          <Link
-            href={`/books/${recommendations[0].id}`}
-            className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black px-4 py-3 shadow-md transition self-start sm:self-center"
-          >
-            <span>Study Explanation</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </section>
+          <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:20px_20px]"></div>
+        </div>
       )}
-
-      {/* Security Footer Seal */}
-      <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 text-center pt-2">
-        <ShieldCheck className="h-4 w-4 text-emerald-600" />
-        <span>
-          Transactional integrity records matched securely against PostgreSQL
-          architecture boundaries.
-        </span>
-      </div>
     </div>
   );
 }

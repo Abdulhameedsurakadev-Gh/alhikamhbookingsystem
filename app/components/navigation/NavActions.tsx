@@ -116,7 +116,7 @@ export function NavActions({ categories, session }: NavActionsProps): React.JSX.
                 )}
                 <Link href="/account/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2 px-4 py-2 hover:bg-slate-50 text-slate-700">
                   <ClipboardList className="h-4 w-4 text-slate-400" />
-                  <span>My Study Orders</span>
+                  <span>My Orders</span>
                 </Link>
                 <div className="border-t border-slate-100 my-1"></div>
                 <button
@@ -124,7 +124,7 @@ export function NavActions({ categories, session }: NavActionsProps): React.JSX.
                   className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-rose-50 text-rose-600 font-semibold cursor-pointer bg-transparent border-0"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Logout Session</span>
+                  <span>Logout</span>
                 </button>
               </div>
             )}
@@ -161,17 +161,17 @@ export function NavActions({ categories, session }: NavActionsProps): React.JSX.
 
           <div className="flex flex-col gap-y-3 divide-y divide-slate-100">
             <Link href="/" onClick={() => setIsOpen(false)} className="pt-2">Home</Link>
-            <Link href="/books" onClick={() => setIsOpen(false)} className="pt-2">All Catalog Books</Link>
+            <Link href="/books" onClick={() => setIsOpen(false)} className="pt-2">Catalog</Link>
             
             {session && session.user ? (
               <div className="pt-3 space-y-2.5 flex flex-col">
-                <span className="text-xs text-slate-400 font-bold uppercase block">Student Session ({session.user.email})</span>
+                <span className="text-xs text-slate-400 font-bold uppercase block">{session.user.email}</span>
                 <Link href="/account/orders" onClick={() => setIsOpen(false)} className="block pl-2 text-slate-600 pt-1">My Orders</Link>
                 {session.user.role === "ADMIN" && <Link href="/admin" onClick={() => setIsOpen(false)} className="block pl-2 text-emerald-800 font-bold pt-1">Admin Dashboard</Link>}
-                <button onClick={handleLogout} className="w-full text-left pl-2 text-rose-600 font-bold bg-transparent border-0 pt-2 cursor-pointer">Logout Session</button>
+                <button onClick={handleLogout} className="w-full text-left pl-2 text-rose-600 font-bold bg-transparent border-0 pt-2 cursor-pointer">Logout</button>
               </div>
             ) : (
-              <Link href="/login" onClick={() => setIsOpen(false)} className="pt-3 text-emerald-800 font-bold">Sign In to Profile</Link>
+              <Link href="/login" onClick={() => setIsOpen(false)} className="pt-3 text-emerald-800 font-bold">Sign In</Link>
             )}
           </div>
         </div>

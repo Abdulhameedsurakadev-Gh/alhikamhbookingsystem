@@ -43,7 +43,7 @@ export async function Navbar({ session }: NavbarProps) {
 
           {/* Desktop Central Menu Links */}
           <nav className="hidden lg:flex items-center gap-x-6 text-sm font-medium text-slate-700">
-            <Link href="/" className="hover:text-emerald-700 transition">Home</Link>
+           {/* <Link href="/" className="hover:text-emerald-700 transition">Home</Link>*/}
             
             {/* Books Dropdown Menu Trigger */}
             <div className="relative group py-2">

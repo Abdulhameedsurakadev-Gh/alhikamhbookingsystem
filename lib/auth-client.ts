@@ -1,8 +1,12 @@
 // app/lib/auth-client.ts
 import { createAuthClient } from "better-auth/react";
+import { adminClient } from "better-auth/client/plugins"; // 🌟 FIXED: Client-side plugin hook
 
 export const authClient = createAuthClient({
-  // The client automatically hooks into /api/auth paths natively
-  // We mirror your configuration prefix here for security context consistency
   cookiePrefix: "alhikmah", 
+  
+  // Synchronizes your data objects so 'data.user.role' compiles perfectly in your UI forms
+  plugins: [
+    adminClient()
+  ]
 });

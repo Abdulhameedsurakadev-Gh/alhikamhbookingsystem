@@ -3,7 +3,7 @@
 
 import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { loginAdmin } from "./actions";
+import { authClient } from "../../../../lib/auth-client"; // 🌟 FIXED: Unified Better-Auth client instance
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,16 +17,33 @@ export default function AdminLoginPage() {
   async function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    
     const formData = new FormData(event.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
 
     startTransition(async () => {
-      const result = await loginAdmin(formData);
-      if (result.success) {
-        // Pushes directly past the middleware block into the dashboard
+      // 🛡️ DIRECT FRONTEND CLIENT ADMIN SIGN-IN INVOCATION
+      const { data, error: authError } = await authClient.signIn.email({
+        email: email.trim(),
+        password: password,
+      });
+
+      if (authError) {
+        setError(authError.message || "Authentication failure");
+        return;
+      }
+
+      // 🛡️ CYBERSECURITY PRIVILEGE BOUNDARY ENFORCEMENT
+      // Better-Auth instantly tracks user object attributes locally right after success
+      if (data?.user?.role === "ADMIN") {
+        // Pushes directly past the middleware proxy block into the main admin dashboard
         router.push("/admin");
         router.refresh();
       } else {
-        setError(result.error || "Authentication failure");
+        setError("Access Denied: Your profile does not possess administrative privileges.");
+        // Instantly wipe the local customer cookie to maintain strict security hygiene
+        await authClient.signOut();
       }
     });
   }

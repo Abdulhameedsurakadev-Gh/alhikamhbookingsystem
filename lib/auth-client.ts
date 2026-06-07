@@ -1,12 +1,13 @@
 // app/lib/auth-client.ts
 import { createAuthClient } from "better-auth/react";
-import { adminClient } from "better-auth/client/plugins"; // 🌟 FIXED: Client-side plugin hook
+import { inferAdditionalFields } from "better-auth/client/plugins"; // 🌟 FIXED: Pulls server-side types automatically
+import type { auth } from "./auth"; // Import your backend auth module instance type configuration
 
 export const authClient = createAuthClient({
-  cookiePrefix: "alhikmah", 
+  cookiePrefix: "alhikmah",
   
-  // Synchronizes your data objects so 'data.user.role' compiles perfectly in your UI forms
+  // 🛡️ Automatically extends frontend user object typing boundaries to match data parameters
   plugins: [
-    adminClient()
+    inferAdditionalFields<typeof auth>()
   ]
 });

@@ -5,6 +5,7 @@ import { FilterSidebar } from "./FilterSidebar";
 import { KnowledgeLevel, TextType, CoverType, VolumeType } from "@prisma/client";
 import { Search, X, BookOpen, Star, Sparkles } from "lucide-react";
 import { SortDropdown } from "./SortDropdown";
+import { BookRequestCTA } from "../../components/shared/BookRequestCTA";
 
 
 interface SearchParams {
@@ -362,6 +363,7 @@ export default async function BooksPage({
               </Link>
             </div>
           )}
+          <BookRequestCTA />
         </main>
       </div>
     </div>
@@ -453,4 +455,5 @@ function PaginationControls({
     </div>
   );
 }
+
 

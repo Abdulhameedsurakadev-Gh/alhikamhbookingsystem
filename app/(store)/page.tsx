@@ -7,6 +7,7 @@ import { SubjectChips } from "../components/home/SubjectChips";
 import { StudyLevels } from "../components/home/StudyLevels";
 import { FeaturedScholars } from "../components/home/FeaturedScholars";
 import { BookGridSection } from "../components/home/BookGridSection";
+import { BookRequestCTA } from "../components/shared/BookRequestCTA";
 import { TrustSection } from "../components/home/TrustSection";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,8 @@ export default async function HomePage() {
 
       {/* 5. Islamic Scholars Historical Chronology Card Hub */}
       <FeaturedScholars scholars={activeScholars} />
+
+      <BookRequestCTA />
 
       {/* 6. Newly Added Manuscripts Block Rows */}
       <BookGridSection title="New Arrivals" title2="Recently added titles from our growing catalog of Islamic works." books={sanitizedNewBooks} />

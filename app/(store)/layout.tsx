@@ -2,6 +2,7 @@
 import React from "react";
 import { headers } from "next/headers";
 import { auth } from "../../lib/auth"; 
+import { TopBar } from "../components/navigation/TopBar";
 import { Navbar } from "../components/navigation/Navbar";
 import { Footer } from "../components/navigation/Footer";
 
@@ -17,6 +18,7 @@ export default async function StoreLayout({
 
   return (
     <div className="flex min-h-screen flex-col justify-between bg-slate-50">
+      <TopBar />
       {/* 🌟 FIXED TYPE COMPATIBILITY: Force-cast the server signature cleanly to resolve the user.role undefined error */}
       <Navbar session={session as any} />
 

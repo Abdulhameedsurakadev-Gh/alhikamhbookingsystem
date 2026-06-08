@@ -229,3 +229,18 @@ enum TextType {
   SHARH
   TAHQIQ
 }
+
+// ==========================================
+// 📧 CONTACT INQUIRIES & SUPPORT MODELS
+// ==========================================
+
+model ContactInquiry {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  category  String   @default("general")
+  message   String
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

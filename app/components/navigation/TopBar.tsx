@@ -6,7 +6,7 @@ import { Phone, MapPin } from "lucide-react";
 
 export function TopBar(): React.JSX.Element {
   const whatsappUrl = "https://wa.me/233202131864";
-  const facebookUrl = "https://www.facebook.com/share/1Fe4k0jd5t"; 
+  const facebookUrl = "https://www.facebook.com/share/1BK7WxoQhx"; 
   const tiktokUrl = "https://www.tiktok.com/@alhikmahbookstore?_r=1&_t=ZS-9714BzUkF0y"; 
 
   return (

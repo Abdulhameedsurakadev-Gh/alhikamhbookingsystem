@@ -1,4 +1,3 @@
-// app/(auth)/login/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -6,6 +5,7 @@ import Link from "next/link";
 import { authClient } from "../../../lib/auth-client"; // Unified client bridge
 import { useCartStore } from "../../../store/useCartStore";
 import { BookOpen, ShieldAlert, Loader2, ArrowRight } from "lucide-react";
+import { mergeGuestCartToDatabase } from "../../(store)/cart/actions"; // Correct relative linked path
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -42,14 +42,17 @@ export default function LoginPage() {
       }
 
       // =========================================================================
-      // 🛒 OPTIONAL BUSINESS LOGIC: Sync mappedGuestCart to database here via api if needed
+      // 🛒 FIXED: Merge guest items to PostgreSQL database BEFORE clearing state!
       // =========================================================================
+      if (data?.user?.id && mappedGuestCart.length > 0) {
+        await mergeGuestCartToDatabase(data.user.id, mappedGuestCart);
+      }
       
       // Clear guest client state once successfully authenticated into PostgreSQL backend
       clearGuestCart();
       
-      // Forces clear session caching context across Server Components matching your original layout intent
-      window.location.href = "/cart"; 
+      // Forces clear session caching context across Server Components and goes straight to checkout
+      window.location.href = "/checkout"; 
     } catch (err) {
       setError("An unexpected authentication error occurred.");
       setLoading(false);
@@ -71,7 +74,6 @@ export default function LoginPage() {
           </p>
           <p className="text-xs text-emerald-400 mt-2 font-medium font-mono">— Sunan Ibn Majah</p>
         </div>
-        {/* Subtle geometric pattern layer overlay backgrounds */}
         <div className="absolute inset-0 opacity-5 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] [background-size:24px_24px]"></div>
       </div>
 
@@ -86,7 +88,6 @@ export default function LoginPage() {
             <p className="text-xs text-slate-400">Sign in to access your saved books, orders, and persistent study catalog charts.</p>
           </div>
 
-          {/* Validation Failure Flash Panel Alert Container */}
           {error && (
             <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 p-3 rounded-xl text-xs font-medium text-rose-700 animate-in fade-in duration-200">
               <ShieldAlert className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
@@ -120,7 +121,6 @@ export default function LoginPage() {
               />
             </div>
 
-            {/* 🌟 FIXED: Kept the primary action clean and moved guest button out of the element tree safely */}
             <button
               type="submit"
               disabled={loading}

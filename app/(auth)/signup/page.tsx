@@ -6,6 +6,7 @@ import Link from "next/link";
 import { authClient } from "../../../lib/auth-client"; // Unified client bridge
 import { useCartStore } from "../../../store/useCartStore";
 import { BookOpen, ShieldAlert, Loader2, UserPlus } from "lucide-react";
+import { mergeGuestCartToDatabase } from "../../(store)/cart/actions"; // New server action for cart merging logic
 
 export default function SignupPage() {
   const [error, setError] = useState("");
@@ -43,30 +44,36 @@ export default function SignupPage() {
       quantity: item.quantity
     }));
 
-    try {
-      // 🛡️ DIRECT FRONTEND CLIENT REGISTER INVOCATION
-      const { data, error: authError } = await authClient.signUp.email({
+       try {
+      // 🛡️ DIRECT FRONTEND CLIENT AUTHENTICATION INVOCATION
+      const { data, error: authError } = await authClient.signIn.email({
         email: email.trim(),
         password: password,
-        name: name.trim(),
       });
 
       if (authError) {
-        setError(authError.message || "Failed to create account. Email may already be in use.");
+        setError(authError.message || "Invalid authentication credentials.");
         setLoading(false);
         return;
       }
 
-      // Clear guest client state once successfully authenticated into database
+      // =========================================================================
+      // 🛒 FIXED: Merge guest items to PostgreSQL database BEFORE clearing state!
+      // =========================================================================
+      if (data?.user?.id && mappedGuestCart.length > 0) {
+        await mergeGuestCartToDatabase(data.user.id, mappedGuestCart);
+      }
+      
+      // Clear guest client state once successfully authenticated into PostgreSQL backend
       clearGuestCart();
       
-      // Full frame reload forces Next.js 16 to evaluate cookie tokens safely
-      window.location.href = "/cart"; 
+      // Forces clear session caching context across Server Components and goes straight to checkout
+      window.location.href = "/checkout"; 
     } catch (err) {
-      setError("An unexpected error occurred during profile registration.");
+      setError("An unexpected authentication error occurred.");
       setLoading(false);
     }
-  };
+
 
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-12 bg-slate-50">

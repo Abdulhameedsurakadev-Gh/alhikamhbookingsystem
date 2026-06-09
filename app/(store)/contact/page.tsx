@@ -1,4 +1,3 @@
-// app/contact/page.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -27,7 +26,6 @@ export default function ContactPage(): React.JSX.Element {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // V1.0.5 localized fallback logs input securely. Future versions hook directly to Supabase.
     console.log("Form data preserved safely:", formData);
     alert("Inquiry logged successfully. If your request is urgent, please click the WhatsApp Support button above.");
     setFormData({ name: "", email: "", message: "" });
@@ -35,8 +33,8 @@ export default function ContactPage(): React.JSX.Element {
 
   const faqs = [
     {
-      q: "How long does delivery take within Ghana?",
-      a: "Orders within Kasoa and Accra typically arrive within 24–48 hours. Regional deliveries across Ghana take between 2 to 4 business days depending on your location."
+      q: "When are orders dispatched and delivered?",
+      a: "To optimize logistics, we disburse orders strictly twice a week on Fridays and Sundays. Once dispatched, local packages (Kasoa/Accra) arrive within 24 hours, while regional shipments take 2–3 business days."
     },
     {
       q: "What payment methods do you accept?",
@@ -63,7 +61,7 @@ export default function ContactPage(): React.JSX.Element {
             Contact <span className="text-emerald-400">Al-Hikmah</span>
           </h1>
           <p className="text-sm sm:text-base text-slate-400 leading-relaxed font-medium">
-            Have a question about a book title, an ongoing delivery, or structured learning paths? Reach out directly and talk to a fellow student of knowledge.
+            Have a question about a book title, an ongoing delivery, or structured learning paths? Reach out directly. Please note we dispatch orders strictly on <span className="text-emerald-400 font-bold">Fridays and Sundays</span>.
           </p>
         </div>
       </section>
@@ -122,7 +120,7 @@ export default function ContactPage(): React.JSX.Element {
           </div>
           <div>
             <h3 className="font-serif font-bold text-slate-200 text-sm">Digital Mail</h3>
-            <p className="text-xs text-slate-400 font-mono mt-1">support@alhikmah.com</p>
+            <p className="text-xs text-slate-400 font-mono mt-1">alhikmahbookstore93@gmail.com</p>
           </div>
           <p className="text-[11px] text-slate-500 leading-relaxed">Submit general administrative inquiries or receipt validations directly.</p>
         </div>
@@ -134,38 +132,39 @@ export default function ContactPage(): React.JSX.Element {
             <Truck className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="font-serif font-bold text-slate-200 text-sm">Ghana Delivery Matrix</h3>
-            <p className="text-xs text-emerald-400 font-semibold mt-1">Countrywide Shipping</p>
+            <h3 className="font-serif font-bold text-slate-200 text-sm">Fulfillment Matrix</h3>
+            <p className="text-xs text-emerald-400 font-semibold mt-1">Friday & Sunday Disbursals</p>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-            Delivery available across Ghana. Convenient, direct pickup options can be coordinated directly within Kasoa.
+            We batch and process packages nationwide twice a week to maintain structure. Direct pickups can be coordinated within Kasoa.
           </p>
         </div>
-
       </section>
 
       {/* 3. DUAL CORE INTERACTIVE BLOCK: FAQ & CONTACT FORM */}
       <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 lg:grid-cols-12 gap-10 border-t border-slate-900/60 mt-6">
         
-        {/* LEFT COLUMN: CRISP FAQ ASSEMBLY (7 COLUMNS) */}
+        {/* LEFT COLUMN: FAQS ACCORDION */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="space-y-1.5 text-center lg:text-left">
-            <h2 className="text-2xl font-bold font-serif text-slate-100">Frequently Asked Questions</h2>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Immediate Reference Solutions</p>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold font-serif text-slate-100 flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-emerald-400" /> Frequently Asked Questions
+            </h2>
+            <p className="text-xs text-slate-500">Quick guidelines regarding common customer operations.</p>
           </div>
 
           <div className="space-y-3">
             {faqs.map((faq, idx) => (
-              <div key={idx} className="bg-slate-900/20 border border-slate-900 rounded-xl overflow-hidden transition-colors">
+              <div key={idx} className="border border-slate-900 bg-slate-900/20 rounded-xl overflow-hidden">
                 <button
                   onClick={() => toggleFaq(idx)}
-                  className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left font-serif font-bold text-sm text-slate-200 hover:text-white transition-colors cursor-pointer"
+                  className="w-full p-4 text-left flex items-center justify-between gap-4 hover:bg-slate-900/40 transition-colors"
                 >
-                  <span>{faq.q}</span>
-                  <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${openFaq === idx ? "rotate-180 text-emerald-400" : ""}`} />
+                  <span className="text-xs sm:text-sm font-semibold text-slate-200">{faq.q}</span>
+                  <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform duration-300 shrink-0 ${openFaq === idx ? "rotate-180 text-emerald-400" : ""}`} />
                 </button>
                 {openFaq === idx && (
-                  <div className="px-5 pb-4 text-xs sm:text-sm text-slate-400 leading-relaxed font-medium border-t border-slate-900/40 pt-2 bg-slate-950/20">
+                  <div className="p-4 bg-slate-950/40 border-t border-slate-900/60 text-xs text-slate-400 leading-relaxed font-medium animate-in slide-in-from-top-2 duration-200">
                     {faq.a}
                   </div>
                 )}
@@ -174,65 +173,66 @@ export default function ContactPage(): React.JSX.Element {
           </div>
         </div>
 
-               {/* RIGHT COLUMN: REFINED ASYNC INQUIRY FORM (5 COLUMNS) */}
-        <div className="lg:col-span-5 bg-slate-900/20 border border-slate-800 p-6 rounded-2xl space-y-4">
+                {/* RIGHT COLUMN: FALLBACK SECURE CONTACT FORM */}
+        <div className="lg:col-span-5 bg-slate-900/20 border border-slate-900 rounded-2xl p-6 space-y-4">
           <div className="space-y-1">
-            <h3 className="text-lg font-bold font-serif text-slate-100">Send an Inquiry</h3>
-            <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Prefer email? Drop us a line and our desk will log the request.</p>
+            <h3 className="font-serif font-bold text-slate-200 text-sm">Send an Inquiry</h3>
+            <p className="text-[11px] text-slate-500">Log messages securely into our fallback administrative stack.</p>
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-3.5">
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Full Name</label>
-              <input
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Name</label>
+              <input 
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Abdullah Kofi"
-                className="w-full h-11 px-4 rounded-xl border border-slate-800 bg-slate-950/60 focus:outline-none focus:border-emerald-500 text-xs font-medium text-slate-200 placeholder-slate-600 transition"
+                placeholder="Zayd ibn Thabit"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-600 focus:bg-slate-900/40 transition"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Address</label>
-              <input
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Email Address</label>
+              <input 
                 type="email"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="name@domain.com"
-                className="w-full h-11 px-4 rounded-xl border border-slate-800 bg-slate-950/60 focus:outline-none focus:border-emerald-500 text-xs font-medium text-slate-200 placeholder-slate-600 transition"
+                placeholder="seeker@knowledge.com"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-600 focus:bg-slate-900/40 transition"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Message Details</label>
-              <textarea
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Message / Inquiry</label>
+              <textarea 
                 required
                 rows={4}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                placeholder="State your question here..."
-                className="w-full p-4 rounded-xl border border-slate-800 bg-slate-950/60 focus:outline-none focus:border-emerald-500 text-xs font-medium text-slate-200 placeholder-slate-600 transition resize-none leading-relaxed"
+                placeholder="Describe your inquiry or needed book volumes..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-600 focus:bg-slate-900/40 transition resize-none"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full h-11 rounded-xl bg-slate-950 hover:bg-slate-900 text-slate-200 hover:text-white font-bold text-xs border border-slate-800 hover:border-slate-700 flex items-center justify-center gap-2 transition cursor-pointer"
+              className="w-full py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-200 hover:text-white font-bold text-xs rounded-xl tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
             >
-              <Send className="h-3.5 w-3.5 text-emerald-400" />
-              Submit Message
+              <Send className="h-3 w-3" /> Send Message
             </button>
           </form>
         </div>
       </section>
 
-      {/* 4. BOOK REQUEST CTA COMPONENT EMBED */}
-      <div className="relative z-10 border-t border-slate-900/60 bg-slate-950/40">
+      {/* 4. EXTRALONG DOWNSTREAM SPECIAL PROCUREMENT DRAWER */}
+      <section className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <BookRequestCTA />
-      </div>
+      </section>
     </main>
   );
 }
+
+

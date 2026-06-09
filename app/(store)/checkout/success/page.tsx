@@ -1,8 +1,14 @@
 // app/checkout/success/page.tsx
 import Link from "next/link";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../../../lib/prisma";
 import { notFound } from "next/navigation";
-import { CheckCircle2, ShoppingBag, ClipboardList, ShieldCheck, MapPin } from "lucide-react";
+import {
+  CheckCircle2,
+  ShoppingBag,
+  ClipboardList,
+  ShieldCheck,
+  MapPin,
+} from "lucide-react";
 
 interface Props {
   searchParams: Promise<{ id?: string }>;
@@ -10,7 +16,9 @@ interface Props {
 
 export const dynamic = "force-dynamic";
 
-export default async function CheckoutSuccessPage({ searchParams }: Props): Promise<React.JSX.Element> {
+export default async function CheckoutSuccessPage({
+  searchParams,
+}: Props): Promise<React.JSX.Element> {
   const params = await searchParams;
   const orderId = params.id;
 
@@ -25,9 +33,9 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
     include: {
       user: { select: { name: true, email: true } },
       orderItems: {
-        include: { book: { select: { title: true } } }
-      }
-    }
+        include: { book: { select: { title: true } } },
+      },
+    },
   });
 
   if (!order) {
@@ -48,15 +56,17 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-8 animate-in fade-in duration-300">
-      
       {/* Visual Success Indicator Badge */}
       <div className="flex flex-col items-center justify-center space-y-2">
         <div className="h-16 w-16 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100 flex items-center justify-center shadow-sm">
           <CheckCircle2 className="h-10 w-10 animate-bounce duration-700" />
         </div>
-        <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">Order Confirmed!</h1>
+        <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">
+          Order Confirmed!
+        </h1>
         <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
-          Alhamdulillah, your transaction has been verified. Your study volumes have been logged inside our ledger.
+          Alhamdulillah, your transaction has been verified. Your study volumes
+          have been logged inside our ledger.
         </p>
       </div>
 
@@ -72,22 +82,36 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
         {/* References Matrix */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div className="space-y-0.5">
-            <span className="text-slate-400 font-medium">Al-Hikmah Order ID</span>
-            <span className="font-mono font-bold text-slate-800 block select-all truncate">{order.id}</span>
+            <span className="text-slate-400 font-medium">
+              Al-Hikmah Order ID
+            </span>
+            <span className="font-mono font-bold text-slate-800 block select-all truncate">
+              {order.id}
+            </span>
           </div>
           {order.paystackReference && (
             <div className="space-y-0.5">
-              <span className="text-slate-400 font-medium">Paystack Gateway ID</span>
-              <span className="font-mono font-bold text-slate-800 block select-all truncate">{order.paystackReference}</span>
+              <span className="text-slate-400 font-medium">
+                Paystack Gateway ID
+              </span>
+              <span className="font-mono font-bold text-slate-800 block select-all truncate">
+                {order.paystackReference}
+              </span>
             </div>
           )}
           <div className="space-y-0.5">
-            <span className="text-slate-400 font-medium">Total Amount Paid</span>
-            <span className="font-bold text-emerald-900 text-sm block">GH₵ {Number(order.totalAmount).toFixed(2)}</span>
+            <span className="text-slate-400 font-medium">
+              Total Amount Paid
+            </span>
+            <span className="font-bold text-emerald-900 text-sm block">
+              GH₵ {Number(order.totalAmount).toFixed(2)}
+            </span>
           </div>
           <div className="space-y-0.5">
             <span className="text-slate-400 font-medium">Student Profile</span>
-            <span className="font-bold text-slate-800 block truncate">{order.user?.name || "Student of Knowledge"}</span>
+            <span className="font-bold text-slate-800 block truncate">
+              {order.user?.name || "Student of Knowledge"}
+            </span>
           </div>
         </div>
 
@@ -96,38 +120,63 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
           <div className="flex items-start gap-2 text-slate-600">
             <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <div className="space-y-1 w-full">
-              <span className="text-slate-400 font-medium block">Delivery Destination</span>
-              
+              <span className="text-slate-400 font-medium block">
+                Delivery Destination
+              </span>
+
               {/* 🌟 PARSED RENDERING: Cleans up data display for delivery riders or customers */}
               {zoneInfo ? (
                 <div className="space-y-0.5 bg-slate-50 border border-slate-100 rounded-xl p-3 text-slate-800">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Zone / Region</p>
-                  <p className="font-semibold text-slate-900 mb-2">{zoneInfo}</p>
-                  
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Specific Area</p>
-                  <p className="font-semibold text-slate-900 mb-2">{areaInfo}</p>
-                  
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Landmarks / Directions</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400">
+                    Zone / Region
+                  </p>
+                  <p className="font-semibold text-slate-900 mb-2">
+                    {zoneInfo}
+                  </p>
+
+                  <p className="text-[10px] uppercase font-bold text-slate-400">
+                    Specific Area
+                  </p>
+                  <p className="font-semibold text-slate-900 mb-2">
+                    {areaInfo}
+                  </p>
+
+                  <p className="text-[10px] uppercase font-bold text-slate-400">
+                    Landmarks / Directions
+                  </p>
                   <p className="font-medium text-slate-700">{landmarkInfo}</p>
                 </div>
               ) : (
-                <p className="font-semibold text-slate-800 leading-relaxed">{order.shippingAddress}</p>
+                <p className="font-semibold text-slate-800 leading-relaxed">
+                  {order.shippingAddress}
+                </p>
               )}
 
-              <p className="text-[10px] uppercase font-bold text-slate-400 pt-1">Contact Number</p>
-              <p className="font-mono font-bold text-emerald-800 text-sm">{order.phoneNumber}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 pt-1">
+                Contact Number
+              </p>
+              <p className="font-mono font-bold text-emerald-800 text-sm">
+                {order.phoneNumber}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Manifest Books Roll Sheet */}
         <div className="border-t border-slate-100 pt-3 text-xs">
-          <span className="text-slate-400 font-medium block mb-1.5">Purchased Manifest Book Items</span>
+          <span className="text-slate-400 font-medium block mb-1.5">
+            Purchased Manifest Book Items
+          </span>
           <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5 font-medium text-slate-700">
             {order.orderItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-center gap-4">
+              <div
+                key={item.id}
+                className="flex justify-between items-center gap-4"
+              >
                 <span className="font-serif truncate">{item.book.title}</span>
-                <span className="text-slate-400 flex-shrink-0">Qty: {item.quantity}</span>
+                <span className="text-slate-400 flex-shrink-0">
+                  Qty: {item.quantity}
+                </span>
               </div>
             ))}
           </div>
@@ -154,9 +203,11 @@ export default async function CheckoutSuccessPage({ searchParams }: Props): Prom
 
       <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-400 pt-4">
         <ShieldCheck className="h-4 w-4 text-emerald-600" />
-        <span>Authentic system receipt entry automatically verified and closed inside PostgreSQL database logs.</span>
+        <span>
+          Authentic system receipt entry automatically verified and closed
+          inside PostgreSQL database logs.
+        </span>
       </div>
-
     </div>
   );
 }

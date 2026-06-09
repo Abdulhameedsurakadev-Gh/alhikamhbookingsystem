@@ -55,7 +55,7 @@ export function CartClient(): React.JSX.Element {
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
       <div>
-        <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">Student Basket</h1>
+        <h1 className="font-serif text-3xl font-extrabold text-slate-900 tracking-tight">Your Basket</h1>
         <p className="text-sm text-slate-500 mt-1">Review your selected volumes and reference materials before checking out.</p>
       </div>
 
@@ -63,7 +63,7 @@ export function CartClient(): React.JSX.Element {
         {/* Left Side: Items List */}
         <div className="lg:col-span-8 space-y-4">
           <div className="flex justify-between items-center px-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Selected Works ({totalItems})</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Selected Books ({totalItems})</span>
             <button 
               onClick={clearCart} 
               className="text-xs font-semibold text-rose-600 hover:text-rose-700 cursor-pointer bg-transparent border-0"

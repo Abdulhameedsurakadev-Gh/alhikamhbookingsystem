@@ -28,7 +28,18 @@ export async function getDashboardMetrics() {
     (await prisma.order.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
-      include: { user: true },
+      include: { 
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            role: true, 
+          }
+          // 🌟 FIXED: Ensure role is included for proper admin access checks in the frontend
+        }
+       },
     })) || [];
 
   return { count, value, mass, lowStock, orders };

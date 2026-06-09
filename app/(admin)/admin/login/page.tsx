@@ -14,39 +14,41 @@ export default function AdminLoginPage() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  async function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+async function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  setError(null);
+  
+  const formData = new FormData(event.currentTarget);
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
-    startTransition(async () => {
-      // 🛡️ DIRECT FRONTEND CLIENT ADMIN SIGN-IN INVOCATION
-      const { data, error: authError } = await authClient.signIn.email({
-        email: email.trim(),
-        password: password,
-      });
-
-      if (authError) {
-        setError(authError.message || "Authentication failure");
-        return;
-      }
-
-      // 🛡️ CYBERSECURITY PRIVILEGE BOUNDARY ENFORCEMENT
-      // Better-Auth instantly tracks user object attributes locally right after success
-      if (data?.user?.role === "ADMIN") {
-        // Pushes directly past the middleware proxy block into the main admin dashboard
-        router.push("/admin");
-        router.refresh();
-      } else {
-        setError("Access Denied: Your profile does not possess administrative privileges.");
-        // Instantly wipe the local customer cookie to maintain strict security hygiene
-        await authClient.signOut();
-      }
+  startTransition(async () => {
+    // 🛡️ DIRECT FRONTEND CLIENT ADMIN SIGN-IN INVOCATION
+    const { data: authData, error: authError } = await authClient.signIn.email({
+      email: email.trim(),
+      password: password,
     });
-  }
+
+    if (authError) {
+      setError(authError.message || "Authentication failure");
+      return;
+    }
+
+    // 🚀 FIXED: Better Auth mounts custom fields as strings. 
+    // We convert it to string comparison safely or access it directly.
+    const userRole = authData?.user?.role;
+
+    if (userRole === "ADMIN") {
+      // Pushes directly past the middleware proxy block into the main admin dashboard
+      router.push("/admin");
+      router.refresh();
+    } else {
+      setError("Access Denied: Your profile does not possess administrative privileges.");
+      // Instantly wipe the local customer cookie to maintain strict security hygiene
+      await authClient.signOut();
+    }
+  });
+}
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans">

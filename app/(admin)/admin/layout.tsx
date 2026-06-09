@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { authClient } from "../../../lib/auth-client"; // 🌟 FIXED: Unified Better-Auth client instance
 
 export default function AdminLayout({
   children,
@@ -21,6 +23,19 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/admin/login");
+          router.refresh();
+        }
+      }
+    });
+  };
+
   const navigationItems = [
     { href: "/admin", label: "Overview Panel", icon: LayoutDashboard, disabled: false },
     { href: "/admin/add-book", label: "Add New Book", icon: BookPlus, disabled: false },

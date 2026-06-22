@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { FilterSidebar } from "./FilterSidebar";
 import { KnowledgeLevel, TextType, CoverType, VolumeType } from "@prisma/client";
-import { Search, X, BookOpen, Star, Sparkles } from "lucide-react";
+import { Search, X, BookOpen, Star, Sparkles, AlertCircle } from "lucide-react";
 import { SortDropdown } from "./SortDropdown";
 import { BookRequestCTA } from "../../components/shared/BookRequestCTA";
 
@@ -172,12 +172,17 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {newArrivals.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
+                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${book.stock === 0 ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                       {book.coverImage ? (
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
+                      )}
+                      {book.stock === 0 && (
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
+                        </div>
                       )}
                     </div>
                     <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
@@ -199,12 +204,17 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {beginnerFriendly.map((book) => (
-                                    <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
+                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${book.stock === 0 ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                       {book.coverImage ? (
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
+                      )}
+                      {book.stock === 0 && (
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
+                        </div>
                       )}
                     </div>
                     <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
@@ -296,7 +306,7 @@ export default async function BooksPage({
               {/* Layout transformation: Single structural rows on smaller breakpoints, three-tier grid slots on desktop */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {allBooks.map((book) => (
-                  <div key={book.id} className="flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative">
+                  <div key={book.id} className={`flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative ${book.stock === 0 ? "opacity-60" : ""}`}>
                     
                     {/* Imagery Canvas Node */}
                     <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
@@ -304,6 +314,16 @@ export default async function BooksPage({
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-300" />
                       ) : (
                         <span className="text-[10px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
+                      )}
+                      
+                      {/* Out of Stock Overlay */}
+                      {book.stock === 0 && (
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <AlertCircle className="h-5 w-5 text-white" />
+                            <span className="text-white text-[9px] font-bold bg-black/60 px-2 py-1 rounded-md">Out of Stock</span>
+                          </div>
+                        </div>
                       )}
                       
                       {/* Top Corner Structural Text Class Indicator Label Tag */}
@@ -332,9 +352,13 @@ export default async function BooksPage({
                         </span>
                         <Link
                           href={`/books/${book.id}`}
-                          className="bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700 font-semibold px-3 py-1.5 rounded-md text-xs transition"
+                          className={`font-semibold px-3 py-1.5 rounded-md text-xs transition ${
+                            book.stock > 0
+                              ? "bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700"
+                              : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          }`}
                         >
-                          View Book
+                          {book.stock > 0 ? "View Book" : "Out"}
                         </Link>
                       </div>
                     </div>
@@ -455,5 +479,3 @@ function PaginationControls({
     </div>
   );
 }
-
-

@@ -15,7 +15,8 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Zap
 } from "lucide-react";
 
 interface Props {
@@ -46,12 +47,32 @@ export default async function BookDetailPage({ params }: Props) {
     include: { category: true },
   });
 
-  // 3. Query recommendations: Find related books within the same Islamic science science category
+  // 3. Query recommendations: Find related books within the same Islamic science category
   const relatedBooks = await prisma.book.findMany({
     where: { categoryId: book.categoryId, NOT: { id: book.id } },
     take: 4,
     include: { author: true },
   });
+
+  // 4. NEW: Query other volumes in same set (if this is a multi-volume work)
+  const otherVolumes = book.volumeCount > 1 || book.volumeType === "MAJMUAT_MUJALLADAT"
+    ? await prisma.book.findMany({
+        where: {
+          AND: [
+            { volumeType: book.volumeType },
+            { NOT: { id: book.id } },
+            {
+              OR: [
+                // Match by author and similar volume count
+                { authorId: book.authorId, volumeCount: { gte: book.volumeCount - 1, lte: book.volumeCount + 1 } },
+              ]
+            }
+          ]
+        },
+        take: 4,
+        include: { author: true },
+      })
+    : [];
 
   return (
     <div className="space-y-12 max-w-7xl mx-auto px-4 py-6">
@@ -88,23 +109,35 @@ export default async function BookDetailPage({ params }: Props) {
             <h1 className="font-serif text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
               {book.title}
             </h1>
-            <p className="text-sm text-slate-500 italic mt-1">
+            <p className="text-sm text-slate-500 italic mt-2">
               By <span className="font-semibold text-emerald-800">{book.author.name}</span> {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
             </p>
           </div>
 
           {/* Pricing Row */}
-          <div className="border-y border-slate-100 py-4 flex items-center justify-between">
+          <div className="border-y border-slate-100 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Price</p>
               <p className="text-2xl font-black text-slate-900 mt-0.5">GH₵ {Number(book.price).toFixed(2)}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Availability</p>
-              <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full mt-1 ${
-                book.stock > 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mt-1 transition ${
+                book.stock > 0 
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
+                  : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
-                {book.stock > 0 ? `${book.stock} Copies In Stock` : "Out of Stock"}
+                {book.stock > 0 ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {book.stock} in Stock
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3.5 w-3.5" />
+                    Out of Stock
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -114,7 +147,7 @@ export default async function BookDetailPage({ params }: Props) {
             book={{
               id: book.id,
               title: book.title,
-              price: Number(book.price), // Safely convert Prisma's Decimal object to a JavaScript number
+              price: Number(book.price),
               weight: Number(book.weight || 0),
               coverImage: book.coverImage,
               stock: book.stock
@@ -125,23 +158,32 @@ export default async function BookDetailPage({ params }: Props) {
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
               <span className="text-slate-400 font-medium block">Binding Cover</span>
-              <span className="font-bold text-slate-800 mt-0.5 block">
-                {book.coverType === "AL_GHILAF_AL_MUQAWWA" ? "Hardcover (Mujallad)" : "Softcover (Ghilaf Waraqi)"}
+              <span className="font-bold text-slate-800 mt-0.5 block text-sm">
+                {book.coverType === "AL_GHILAF_AL_MUQAWWA" ? "Hardcover" : "Softcover"}
               </span>
             </div>
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
               <span className="text-slate-400 font-medium block">Volume Count</span>
-              <span className="font-bold text-slate-800 mt-0.5 block">{book.volumeCount} {book.volumeCount > 1 ? "Volumes" : "Single Volume"}</span>
+              <span className="font-bold text-slate-800 mt-0.5 block text-sm">{book.volumeCount} {book.volumeCount > 1 ? "Vols" : "Vol"}</span>
             </div>
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Publisher Label</span>
-              <span className="font-bold text-slate-800 mt-0.5 block truncate">{book.publisher} {book.publishedYear ? `(${book.publishedYear} AH)` : ""}</span>
+              <span className="text-slate-400 font-medium block">Publisher</span>
+              <span className="font-bold text-slate-800 mt-0.5 block text-sm truncate">{book.publisher}</span>
             </div>
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Classification / Text Type</span>
-              <span className="font-bold text-emerald-800 mt-0.5 block font-mono uppercase">{book.textType}</span>
+              <span className="text-slate-400 font-medium block">Text Type</span>
+              <span className="font-bold text-emerald-800 mt-0.5 block text-sm font-mono uppercase">{book.textType}</span>
             </div>
           </div>
+
+          {/* Additional Details */}
+          {book.publishedYear && (
+            <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-xs">
+              <span className="text-blue-700 font-semibold">Published:</span> {book.publishedYear} AH
+              {book.language && <span className="text-blue-700 font-semibold ml-2">• Language:</span>}
+              {book.language && <span className="text-blue-600 ml-1">{book.language}</span>}
+            </div>
+          )}
         </div>
 
       </div>
@@ -160,7 +202,7 @@ export default async function BookDetailPage({ params }: Props) {
         {/* Searchable Text Table of Contents Area */}
         <div className="lg:col-span-1 space-y-4">
           <h3 className="font-serif text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Tag className="h-5 w-5 text-emerald-700" /> Table of Contents Index
+            <Tag className="h-5 w-5 text-emerald-700" /> Table of Contents
           </h3>
           <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs max-h-64 overflow-y-auto font-mono text-slate-600 leading-normal whitespace-pre-wrap shadow-sm">
             {book.tableOfContents || "Table of contents index text has not been typed out for this volume yet."}
@@ -192,7 +234,7 @@ export default async function BookDetailPage({ params }: Props) {
             )}
 
             {/* Commentaries Block */}
-                        {book.explanations.length > 0 && (
+            {book.explanations.length > 0 && (
               <div className="bg-white/5 border border-white/10 p-4 rounded-xl space-y-2">
                 <span className="text-emerald-300 font-medium uppercase tracking-wider block text-[10px]">Available Shurooh (Commentaries)</span>
                 <p className="text-sm font-serif font-bold text-amber-100 mt-1">Scholarly explanations for this text:</p>
@@ -230,7 +272,45 @@ export default async function BookDetailPage({ params }: Props) {
         </div>
       </section>
 
-      {/* SECTION 6: More Books By This Scholar */}
+      {/* SECTION 6: Other Volumes in This Set (NEW) */}
+      {otherVolumes.length > 0 && (
+        <section className="space-y-4 border-t border-slate-100 pt-6">
+          <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-amber-500" /> Other Volumes in This Set
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {otherVolumes.map((volBook) => (
+              <Link 
+                key={volBook.id} 
+                href={`/books/${volBook.id}`} 
+                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
+                  volBook.stock === 0 ? "opacity-60" : ""
+                }`}
+              >
+                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+                  {volBook.coverImage ? (
+                    <img src={volBook.coverImage} alt={volBook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
+                  ) : (
+                    <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{volBook.title}</span>
+                  )}
+                  {volBook.stock === 0 && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 space-y-0.5">
+                  <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-800 transition">{volBook.title}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">By {volBook.author.name}</p>
+                  <p className="text-[11px] font-extrabold text-emerald-700 pt-1">GH₵ {Number(volBook.price).toFixed(2)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 7: More Books By This Scholar */}
       {moreByAuthor.length > 0 && (
         <section className="space-y-4 border-t border-slate-100 pt-6">
           <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
@@ -238,12 +318,23 @@ export default async function BookDetailPage({ params }: Props) {
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {moreByAuthor.map((abook) => (
-              <Link key={abook.id} href={`/books/${abook.id}`} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group">
-                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden">
+              <Link 
+                key={abook.id} 
+                href={`/books/${abook.id}`} 
+                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
+                  abook.stock === 0 ? "opacity-60" : ""
+                }`}
+              >
+                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                   {abook.coverImage ? (
                     <img src={abook.coverImage} alt={abook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
                   ) : (
                     <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{abook.title}</span>
+                  )}
+                  {abook.stock === 0 && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
+                    </div>
                   )}
                 </div>
                 <div className="mt-2 space-y-0.5">
@@ -256,7 +347,7 @@ export default async function BookDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* SECTION 7: Related Books by Science Category */}
+      {/* SECTION 8: Related Books by Science Category */}
       {relatedBooks.length > 0 && (
         <section className="space-y-4 border-t border-slate-100 pt-6">
           <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
@@ -264,12 +355,23 @@ export default async function BookDetailPage({ params }: Props) {
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {relatedBooks.map((rbook) => (
-              <Link key={rbook.id} href={`/books/${rbook.id}`} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group">
-                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden">
+              <Link 
+                key={rbook.id} 
+                href={`/books/${rbook.id}`} 
+                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
+                  rbook.stock === 0 ? "opacity-60" : ""
+                }`}
+              >
+                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                   {rbook.coverImage ? (
                     <img src={rbook.coverImage} alt={rbook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
                   ) : (
                     <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{rbook.title}</span>
+                  )}
+                  {rbook.stock === 0 && (
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
+                    </div>
                   )}
                 </div>
                 <div className="mt-2 space-y-0.5">
@@ -285,4 +387,3 @@ export default async function BookDetailPage({ params }: Props) {
     </div>
   );
 }
-

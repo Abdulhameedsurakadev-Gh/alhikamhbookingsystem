@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { createBook } from "./actions";
+import { createBook } from "./add-book_actions_updated";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 type Author = { id: string; name: string; nameArabic: string | null };
@@ -42,7 +42,7 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-100">Add New Arabic/Islamic Manuscript</h1>
-        <p className="text-sm text-slate-400 mt-1">Register text editions, volumes, weights, and detailed catalog options.</p>
+        <p className="text-sm text-slate-400 mt-1">Register text editions, volumes, weights, pricing, and supplier details.</p>
       </div>
 
       {/* Feedback Messages */}
@@ -118,11 +118,11 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
           ></textarea>
         </div>
 
-        {/* Pricing, Stock, Weight */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Pricing & Weight */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Price (GHS) *
+              Selling Price (GHS) *
             </label>
             <input
               required
@@ -132,20 +132,6 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               name="price"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               placeholder="0.00"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Stock Inventory *
-            </label>
-            <input
-              required
-              type="number"
-              min="0"
-              name="stock"
-              defaultValue="0"
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
 
@@ -174,6 +160,71 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               defaultValue="Arabic"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
+          </div>
+        </div>
+
+        {/* Availability Toggle */}
+        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800/80">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="available"
+              defaultChecked={true}
+              className="w-5 h-5 rounded bg-slate-800 border border-slate-700 text-emerald-600 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            />
+            <span className="text-sm font-semibold text-slate-200">
+              Mark as Available (Ready to sell from supplier)
+            </span>
+          </label>
+          <p className="text-xs text-slate-400 mt-2 ml-8">
+            Uncheck if this book is currently out of stock with your supplier
+          </p>
+        </div>
+
+        {/* Supplier Information */}
+        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800/80 space-y-4">
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+            Dropshipping Supplier Details
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Supplier Name
+              </label>
+              <input
+                type="text"
+                name="supplierName"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g., Ahing, Dar Al-Hadith"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Supplier Cost (GHS)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="supplierCost"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Wholesale price"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Supplier SKU / Reference
+              </label>
+              <input
+                type="text"
+                name="supplierSKU"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Supplier's reference code"
+              />
+            </div>
           </div>
         </div>
 
@@ -254,7 +305,7 @@ export default function AddBookForm({ authors, categories, referenceBooks }: Add
               type="number"
               min="1"
               name="volumeCount"
-                            defaultValue="1"
+              defaultValue="1"
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>

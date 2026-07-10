@@ -75,7 +75,6 @@ model Book {
   title           String
   description     String?
   price           Decimal        @db.Decimal(10, 2)
-  stock           Int            @default(0)
   publisher       String
   publishedYear   Int?
   language        String         @default("Arabic")
@@ -100,6 +99,12 @@ model Book {
   images          BookImage[]
   orderItems      OrderItem[]
   cartItems       CartItem[]
+  supplierName    String?          // "Ahing" or future supplier names
+  supplierCost    Decimal?         @db.Decimal(10, 2)  // What you pay wholesale
+  supplierSKU     String?          // Their reference number (optional)
+  available       Boolean          @default(true)  // Supplier has it?
+  lastCheckedAt   DateTime?        // When you last verified at shop
+  profitMargin    Float?           // Auto-calculated (5%, 10%, 15%, etc.)
 }
 
 model BookImage {

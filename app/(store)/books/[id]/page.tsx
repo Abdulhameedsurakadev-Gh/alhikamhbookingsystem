@@ -4,7 +4,7 @@ import Link from "next/link";
 import { prisma } from "../../../../lib/prisma";
 import { BookGallery } from "./BookGallery";
 import { AddToCartButton } from "../../../../components/ui/AddToCartButton";
-import { useCartStore } from "../../../../store/useCartStore"; 
+//import { useCartStore } from "../../../../store/useCartStore"; 
 import { 
   BookOpen, 
   Calendar, 
@@ -123,14 +123,14 @@ export default async function BookDetailPage({ params }: Props) {
             <div className="text-right">
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Availability</p>
               <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mt-1 transition ${
-                book.stock > 0 
+                book.available
                   ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
                   : "bg-rose-50 text-rose-700 border border-rose-200"
               }`}>
-                {book.stock > 0 ? (
+                {book.available ? (
                   <>
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    {book.stock} in Stock
+                    In Stock
                   </>
                 ) : (
                   <>
@@ -150,7 +150,7 @@ export default async function BookDetailPage({ params }: Props) {
               price: Number(book.price),
               weight: Number(book.weight || 0),
               coverImage: book.coverImage,
-              stock: book.stock
+              available: book.available
             }} 
           />
           
@@ -284,7 +284,7 @@ export default async function BookDetailPage({ params }: Props) {
                 key={volBook.id} 
                 href={`/books/${volBook.id}`} 
                 className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  volBook.stock === 0 ? "opacity-60" : ""
+                  !volBook.available ? "opacity-60" : ""
                 }`}
               >
                 <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
@@ -293,7 +293,7 @@ export default async function BookDetailPage({ params }: Props) {
                   ) : (
                     <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{volBook.title}</span>
                   )}
-                  {volBook.stock === 0 && (
+                  {!volBook.available && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                       <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
                     </div>
@@ -322,7 +322,7 @@ export default async function BookDetailPage({ params }: Props) {
                 key={abook.id} 
                 href={`/books/${abook.id}`} 
                 className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  abook.stock === 0 ? "opacity-60" : ""
+                  !abook.available ? "opacity-60" : ""
                 }`}
               >
                 <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
@@ -331,7 +331,7 @@ export default async function BookDetailPage({ params }: Props) {
                   ) : (
                     <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{abook.title}</span>
                   )}
-                  {abook.stock === 0 && (
+                  {!abook.available && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                       <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
                     </div>
@@ -359,7 +359,7 @@ export default async function BookDetailPage({ params }: Props) {
                 key={rbook.id} 
                 href={`/books/${rbook.id}`} 
                 className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  rbook.stock === 0 ? "opacity-60" : ""
+                  !rbook.available ? "opacity-60" : ""
                 }`}
               >
                 <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
@@ -368,7 +368,7 @@ export default async function BookDetailPage({ params }: Props) {
                   ) : (
                     <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{rbook.title}</span>
                   )}
-                  {rbook.stock === 0 && (
+                  {!rbook.available && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                       <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
                     </div>

@@ -11,7 +11,7 @@ interface GridBookItem {
   price: string;
   coverImage: string;
   authorName: string;
-  stock?: number;
+  available?: boolean;
 }
 
 interface BookGridSectionProps {
@@ -32,7 +32,7 @@ export function BookGridSection({ title, title2, books }: BookGridSectionProps) 
       price: parseFloat(book.price),
       weight: 0.5, // Default weight
       coverImage: book.coverImage,
-      stock: book.stock || 0,
+      available: book.available ?? true,
     });
 
     // Show feedback
@@ -51,7 +51,7 @@ export function BookGridSection({ title, title2, books }: BookGridSectionProps) 
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {books.map((book) => {
-          const isOutOfStock = (book.stock || 0) === 0;
+          const isOutOfStock = book.available === false;
           const isAdded = addedToCart === book.id;
 
           return (

@@ -42,7 +42,7 @@ export async function POST(req: Request): Promise<Response> {
       return NextResponse.json({ error: "Server payment configuration missing." }, { status: 500 });
     }
 
-    const paystackResponse = await fetch(`https://paystack.co{reference}`, {
+    const paystackResponse = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${paystackSecretKey}`,
@@ -82,13 +82,6 @@ export async function POST(req: Request): Promise<Response> {
           orderItems: { create: itemsToCreate },
         },
       });
-
-      for (const item of cart.items) {
-        await tx.book.update({
-          where: { id: item.bookId },
-          data: { stock: { decrement: item.quantity } }
-        });
-      }
 
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
       return newOrder;

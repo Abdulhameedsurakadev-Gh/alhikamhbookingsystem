@@ -22,7 +22,7 @@ interface FeaturedBook {
   price: string;
   coverImage: string;
   authorName: string;
-  stock: number;
+  available: boolean;
 }
 
 interface HeroStats {
@@ -58,7 +58,7 @@ export function Hero({ heroStats }: HeroProps) {
         price: parseFloat(heroStats.featuredBook.price),
         weight: 0.5,
         coverImage: heroStats.featuredBook.coverImage,
-        stock: heroStats.featuredBook.stock,
+        available: heroStats.featuredBook.available,
       });
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);

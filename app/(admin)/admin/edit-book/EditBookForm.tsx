@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 type SanitizedBook = {
-  id: string; title: string; description: string; isbn: string; price: string; stock: number;
+  id: string; title: string; description: string; isbn: string; price: string;
   publisher: string; publishedYear: number | string; language: string; weight: string;
   coverImage: string; insideImage: string; tableOfContents: string; authorId: string; categoryId: string;
   coverType: string; volumeType: string; volumeCount: number; knowledgeLevel: string;
@@ -141,20 +141,6 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
               min="0"
               name="price"
               defaultValue={book.price}
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Stock Inventory *
-            </label>
-            <input
-              required
-              type="number"
-              min="0"
-              name="stock"
-              defaultValue={book.stock}
               className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>

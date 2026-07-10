@@ -10,7 +10,6 @@ export async function updateBook(bookId: string, formData: FormData) {
     const description = formData.get("description") as string || null;
     const isbn = formData.get("isbn") as string || null;
     const price = parseFloat(formData.get("price") as string);
-    const stock = parseInt(formData.get("stock") as string, 10);
     const publisher = formData.get("publisher") as string;
     const publishedYear = formData.get("publishedYear") ? parseInt(formData.get("publishedYear") as string, 10) : null;
     const language = formData.get("language") as string || "Arabic";
@@ -36,7 +35,7 @@ export async function updateBook(bookId: string, formData: FormData) {
       return { success: false, error: "Target manuscript record not found" };
     }
 
-    if (!title || isNaN(price) || isNaN(stock) || !publisher || !authorId || !categoryId) {
+    if (!title || isNaN(price) || !publisher || !authorId || !categoryId) {
       return { success: false, error: "Missing or invalid required fields" };
     }
 
@@ -61,7 +60,6 @@ export async function updateBook(bookId: string, formData: FormData) {
         description,
         isbn,
         price,
-        stock,
         publisher,
         publishedYear,
         language,

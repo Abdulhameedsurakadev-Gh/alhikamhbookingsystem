@@ -113,7 +113,7 @@ export function CartClient(): React.JSX.Element {
                       </span>
                       <button 
                         onClick={() => updateQuantity(item.id, item.quantity + 1)} 
-                        disabled={item.quantity >= item.stock} 
+                        disabled={!item.available}
                         className="p-2 text-slate-500 hover:bg-slate-100 transition disabled:opacity-30 cursor-pointer bg-transparent border-0"
                       >
                         <Plus className="h-3 w-3" />

@@ -10,7 +10,7 @@ export async function createBook(formData: FormData) {
     const description = formData.get("description") as string || null;
     const isbn = formData.get("isbn") as string || null;
     const price = parseFloat(formData.get("price") as string);
-    const stock = parseInt(formData.get("stock") as string, 10);
+    const available = formData.get("available") === "true";
     const publisher = formData.get("publisher") as string;
     const publishedYear = formData.get("publishedYear") ? parseInt(formData.get("publishedYear") as string, 10) : null;
     const language = formData.get("language") as string || "Arabic";
@@ -21,12 +21,17 @@ export async function createBook(formData: FormData) {
     const explainsBookId = formData.get("explainsBookId") as string || null;
     const tableOfContents = formData.get("tableOfContents") as string || null;
 
+    // Supplier fields for dropshipping
+    const supplierName = formData.get("supplierName") as string || null;
+    const supplierCost = formData.get("supplierCost") ? parseFloat(formData.get("supplierCost") as string) : null;
+    const supplierSKU = formData.get("supplierSKU") as string || null;
+
     const coverType = formData.get("coverType") as CoverType;
     const volumeType = formData.get("volumeType") as VolumeType;
     const knowledgeLevel = formData.get("knowledgeLevel") as KnowledgeLevel;
     const textType = formData.get("textType") as TextType;
 
-    if (!title || isNaN(price) || isNaN(stock) || !publisher || !authorId || !categoryId) {
+    if (!title || isNaN(price) || !publisher || !authorId || !categoryId) {
       return { success: false, error: "Missing or invalid required fields" };
     }
 
@@ -45,7 +50,7 @@ export async function createBook(formData: FormData) {
         description,
         isbn,
         price,
-        stock,
+        available,
         publisher,
         publishedYear,
         language,
@@ -60,6 +65,11 @@ export async function createBook(formData: FormData) {
         knowledgeLevel,
         textType,
         explainsBookId: explainsBookId || null,
+        
+        // Supplier fields for dropshipping
+        supplierName,
+        supplierCost,
+        supplierSKU,
         
         // Maps inside preview text URLs directly into the relation table structure
         images: finalPreviewUrl ? {

@@ -1,7 +1,7 @@
 // app/(admin)/admin/manage-inventory/page.tsx
 import React from "react";
 import { prisma } from "@/lib/prisma";
-import InventoryClientView from "./InventoryClientView";
+import InventoryClientView from "./InventoryClientView_dropshipping";
 
 export default async function ManageInventoryPage() {
   // Fetch complete dataset array including related category and author objects

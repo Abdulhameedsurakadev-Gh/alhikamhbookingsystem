@@ -43,7 +43,6 @@ export default async function EditBookPage({ searchParams }: PageProps) {
     description: rawBook.description || "",
     isbn: rawBook.isbn || "",
     price: rawBook.price.toString(), // Convert Prisma Decimal safely to a plain string
-    stock: rawBook.stock,
     publisher: rawBook.publisher,
     publishedYear: rawBook.publishedYear || "",
     language: rawBook.language,

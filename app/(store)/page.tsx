@@ -39,33 +39,33 @@ export default async function HomePage() {
     }),
     prisma.book.findMany({
       take: 4,
-      where: { stock: { gt: 0 } },
+      where: { available: true },
       include: { author: { select: { name: true } } },
-      orderBy: { stock: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.book.findMany({
-      where: { knowledgeLevel: "MUBTADI", stock: { gt: 0 } },
+      where: { knowledgeLevel: "MUBTADI", available: true },
       take: 3,
       include: { author: { select: { name: true } } },
-      orderBy: { stock: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.book.findMany({
-      where: { knowledgeLevel: "MUTAWASSIT", stock: { gt: 0 } },
+      where: { knowledgeLevel: "MUTAWASSIT", available: true },
       take: 3,
       include: { author: { select: { name: true } } },
-      orderBy: { stock: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.book.findMany({
-      where: { knowledgeLevel: "MUTAQADDIM", stock: { gt: 0 } },
-      take: 3,
+      where: { available: true },
+      take: 4,
       include: { author: { select: { name: true } } },
-      orderBy: { stock: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
     // Featured book (most popular/newest with stock)
     prisma.book.findFirst({
-      where: { stock: { gt: 0 } },
+      where: { available: true },
       include: { author: { select: { name: true } } },
-      orderBy: { stock: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -75,7 +75,7 @@ export default async function HomePage() {
       prisma.book.count(),
       prisma.category.count({ where: { parentId: null } }),
       prisma.author.count(),
-      prisma.book.count({ where: { stock: { gt: 0 } } }),
+      prisma.book.count({ where: { available: true } }),
     ]);
 
   // 3. Fetch featured books for each scholar
@@ -85,10 +85,10 @@ export default async function HomePage() {
   for (const scholar of activeScholars) {
     const [scholarBooks, bookCount] = await Promise.all([
       prisma.book.findMany({
-        where: { authorId: scholar.id, stock: { gt: 0 } },
+        where: { authorId: scholar.id, available: true },
         take: 2,
         include: { author: { select: { name: true } } },
-        orderBy: { stock: "desc" },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.book.count({ where: { authorId: scholar.id } }),
     ]);
@@ -112,7 +112,7 @@ export default async function HomePage() {
     price: b.price.toString(),
     coverImage: b.coverImage || "",
     authorName: b.author?.name || "Unknown Scholar",
-    stock: b.stock || 0,
+    available: b.available,
   });
   const sanitizeByLevel = (books: any[]) => books.map(sanitizeBook);
 

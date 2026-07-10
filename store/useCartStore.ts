@@ -7,8 +7,8 @@ export interface CartItem {
   price: number; 
   weight: number; 
   coverImage: string | null;
-  stock: number; 
   quantity: number;
+  available: boolean;
 }
 
 interface CartState {
@@ -30,14 +30,12 @@ export const useCartStore = create<CartState>()(
         const existingItem = currentItems.find((item) => item.id === book.id);
 
         if (existingItem) {
-          if (existingItem.quantity >= book.stock) return;
           set({
             items: currentItems.map((item) =>
               item.id === book.id ? { ...item, quantity: item.quantity + 1 } : item
             ),
           });
         } else {
-          if (book.stock < 1) return;
           set({ items: [...currentItems, { ...book, quantity: 1 }] });
         }
       },
@@ -50,7 +48,7 @@ export const useCartStore = create<CartState>()(
         const item = get().items.find((i) => i.id === bookId);
         if (!item) return;
 
-        const validQuantity = Math.max(1, Math.min(quantity, item.stock));
+        const validQuantity = Math.max(1, quantity);
         set({
           items: get().items.map((item) =>
             item.id === bookId ? { ...item, quantity: validQuantity } : item

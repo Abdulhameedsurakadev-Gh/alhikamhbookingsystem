@@ -172,14 +172,14 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {newArrivals.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${book.stock === 0 ? "opacity-60" : ""}`}>
+                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                       {book.coverImage ? (
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
-                      {book.stock === 0 && (
+                      {!book.available && (
                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                           <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
                         </div>
@@ -204,14 +204,14 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {beginnerFriendly.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${book.stock === 0 ? "opacity-60" : ""}`}>
+                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                       {book.coverImage ? (
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
-                      {book.stock === 0 && (
+                      {!book.available && (
                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                           <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
                         </div>
@@ -306,7 +306,7 @@ export default async function BooksPage({
               {/* Layout transformation: Single structural rows on smaller breakpoints, three-tier grid slots on desktop */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {allBooks.map((book) => (
-                  <div key={book.id} className={`flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative ${book.stock === 0 ? "opacity-60" : ""}`}>
+                  <div key={book.id} className={`flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative ${!book.available ? "opacity-60" : ""}`}>
                     
                     {/* Imagery Canvas Node */}
                     <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
@@ -317,7 +317,7 @@ export default async function BooksPage({
                       )}
                       
                       {/* Out of Stock Overlay */}
-                      {book.stock === 0 && (
+                      {!book.available && (
                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                           <div className="flex flex-col items-center gap-1">
                             <AlertCircle className="h-5 w-5 text-white" />
@@ -353,12 +353,12 @@ export default async function BooksPage({
                         <Link
                           href={`/books/${book.id}`}
                           className={`font-semibold px-3 py-1.5 rounded-md text-xs transition ${
-                            book.stock > 0
+                            book.available
                               ? "bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700"
                               : "bg-slate-100 text-slate-400 cursor-not-allowed"
                           }`}
                         >
-                          {book.stock > 0 ? "View Book" : "Out"}
+                          {book.available ? "View Book" : "Out"}
                         </Link>
                       </div>
                     </div>
@@ -389,92 +389,6 @@ export default async function BooksPage({
           )}
           <BookRequestCTA />
         </main>
-      </div>
-    </div>
-  );
-}
-
-/* ==========================================================================
-   INTERNAL CORE UI EXTENSION SUB-COMPONENTS (Kept inside same file for execution clarity)
-   ========================================================================== */
-
-
-/**
- * Clean Pagination bar tracking page state markers dynamically 
- */
-function PaginationControls({
-  currentPage,
-  totalPages,
-}: {
-  currentPage: number;
-  totalPages: number;
-}) {
-  const createPageUrl = (pageNumber: number) => {
-    const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set("page", pageNumber.toString());
-    return `/books?${searchParams.toString()}`;
-  };
-
-  return (
-    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm">
-      <div className="flex flex-1 justify-between sm:hidden">
-        <Link
-          href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
-          className={`relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
-            currentPage <= 1 ? "pointer-events-none opacity-40" : ""
-          }`}
-        >
-          Previous
-        </Link>
-        <Link
-          href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
-          className={`relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
-            currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
-          }`}
-        >
-          Next
-        </Link>
-      </div>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs text-slate-700">
-            Showing page <span className="font-semibold">{currentPage}</span> of{" "}
-            <span className="font-semibold">{totalPages}</span> pages
-          </p>
-        </div>
-        <div>
-          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-            <Link
-              href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
-              className={`relative inline-flex items-center rounded-l-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
-                currentPage <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              Previous
-            </Link>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Link
-                key={page}
-                href={createPageUrl(page)}
-                className={`relative inline-flex items-center border px-3 py-2 text-xs font-medium ${
-                  page === currentPage
-                    ? "z-10 bg-emerald-800 text-white border-emerald-800"
-                    : "bg-white border-slate-300 text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                {page}
-              </Link>
-            ))}
-            <Link
-              href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
-              className={`relative inline-flex items-center rounded-r-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
-                currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              Next
-            </Link>
-          </nav>
-        </div>
       </div>
     </div>
   );

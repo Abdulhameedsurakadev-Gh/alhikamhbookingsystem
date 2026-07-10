@@ -15,11 +15,34 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   name          String?
-  role          UserRole  @default(CUSTOMER) // Kept your robust custom enum role access bounds
+  role          UserRole  @default(CUSTOMER) // CUSTOMER | MALAM | MADRASAH | ADMIN
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  
+  // NEW B2B VERIFICATION FIELDS - ADDED SAFELY
+  verificationStatus VerificationStatus?  // PENDING | APPROVED | REJECTED
+  verificationNotes  String?              // Why approved/rejected
+  verifiedAt         DateTime?            // When Abdul verified
+  verifiedBy         String?              // Abdul's notes
+  phone              String?              // Contact phone
+  
+  // NEW MALAM (Teacher Reseller) FIELDS
+  teachingSubjects   String?              // "Quran, Tajweed, Arabic"
+  yearsTeaching      String?              // "Less than 1yr", "1-2yrs", "2-5yrs", "5+ years"
+  madrasahName       String?              // School name
+  madrasahPhone      String?              // School contact
+  
+  // NEW MADRASAH (Institution) FIELDS
+  organizationName   String?              // School name
+  principalName      String?              // Director/Principal name
+  studentCount       Int?                 // Number of students
+  location           String?              // "Accra", "Kasoa", etc.
+  
+  // NEW DOCUMENT PROOF FIELDS
+  idProofUrl         String?              // National ID scan
+  letterUrl          String?              // Madrasah letter scan
   
   // Relational mappings out to your functional business models
   orders        Order[]
@@ -105,6 +128,12 @@ model Book {
   available       Boolean          @default(true)  // Supplier has it?
   lastCheckedAt   DateTime?        // When you last verified at shop
   profitMargin    Float?           // Auto-calculated (5%, 10%, 15%, etc.)
+  
+  // NEW PRICING TIER FIELDS - ONLY APPLY IF price >= 50 GHS
+  // IF price < 50 GHS: Everyone pays same (retail price)
+  // IF price >= 50 GHS: Use tiered pricing below
+  malamPrice      Decimal?         @db.Decimal(10, 2)  // Teacher reseller price
+  madrasahPrice   Decimal?         @db.Decimal(10, 2)  // Madrasah bulk price
 }
 
 model BookImage {
@@ -128,6 +157,12 @@ model Order {
   updatedAt         DateTime    @updatedAt
   paymentChannel    String?
   paystackReference String?     @unique
+  
+  // NEW DELIVERY & PAYMENT FIELDS
+  deliveryDate      DateTime?      // Friday delivery date
+  paymentMethod     PaymentMethod? // PAYSTACK | CASH_ON_DELIVERY
+  location          String?        // "Accra", "Kasoa" - needed for COD check
+  
   user              User        @relation(fields: [userId], references: [id])
   orderItems        OrderItem[]
 }
@@ -200,8 +235,16 @@ enum BookImageLabel {
 }
 
 enum UserRole {
-  CUSTOMER
-  ADMIN
+  CUSTOMER    // Regular retail customer
+  MALAM       // Teacher reseller (verified) - NEW
+  MADRASAH    // Institution (verified) - NEW
+  ADMIN       // Abdul only
+}
+
+enum VerificationStatus {
+  PENDING     // Awaiting Abdul's review - NEW
+  APPROVED    // Verified & can access B2B pricing - NEW
+  REJECTED    // Not verified, cannot access B2B - NEW
 }
 
 enum OrderStatus {
@@ -210,6 +253,11 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum PaymentMethod {
+  PAYSTACK              // Online payment - NEW
+  CASH_ON_DELIVERY      // Only for Kasoa - NEW
 }
 
 enum CoverType {

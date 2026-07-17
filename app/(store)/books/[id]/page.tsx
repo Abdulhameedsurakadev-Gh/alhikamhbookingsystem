@@ -4,7 +4,6 @@ import Link from "next/link";
 import { prisma } from "../../../../lib/prisma";
 import { BookGallery } from "./BookGallery";
 import { AddToCartButton } from "../../../../components/ui/AddToCartButton";
-//import { useCartStore } from "../../../../store/useCartStore"; 
 import { 
   BookOpen, 
   Calendar, 
@@ -19,6 +18,11 @@ import {
   Zap
 } from "lucide-react";
 
+// ✅ ADD THESE v2.0 PORTAL IMPORTS FOR SECURE B2B PRICING TIERS
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { PriceDisplay, PriceComparison } from "../PriceDisplay";
+
 interface Props {
   params: Promise<{ id: string }>;
 }
@@ -26,21 +30,28 @@ interface Props {
 export default async function BookDetailPage({ params }: Props) {
   const { id } = await params;
 
-  // 1. Unified Scholarly Query: Include author, category, deep media files, and text relationships
-  const book = await prisma.book.findUnique({
-    where: { id },
-    include: {
-      author: true,
-      category: true,
-      images: { orderBy: { sortOrder: "asc" } },
-      explainsBook: { include: { author: true } }, // The original text this book comments on
-      explanations: { include: { author: true } }, // Alternative commentaries on this book
-    },
-  });
+  // ✅ SECURE HOOK: Fetch complete user session data concurrently with database data queries
+  const [session, book] = await Promise.all([
+    auth.api.getSession({ headers: await headers() }),
+    prisma.book.findUnique({
+      where: { id },
+      include: {
+        author: true,
+        category: true,
+        images: { orderBy: { sortOrder: "asc" } },
+        explainsBook: { include: { author: true } }, // The original text this book comments on
+        explanations: { include: { author: true } }, // Alternative commentaries on this book
+      },
+    })
+  ]);
 
   if (!book) notFound();
 
-  // 2. Query recommendations: Find more books by the same scholar/author
+  const userRole = session?.user?.role || null;
+  // Safely extract verificationStatus from the extended Better-Auth database properties
+  const isVerified = (session?.user as any)?.verificationStatus === "APPROVED";
+
+  // 2. Query recommendations: Find parallel book models by the same scholar/author
   const moreByAuthor = await prisma.book.findMany({
     where: { authorId: book.authorId, NOT: { id: book.id } },
     take: 4,
@@ -54,7 +65,7 @@ export default async function BookDetailPage({ params }: Props) {
     include: { author: true },
   });
 
-  // 4. NEW: Query other volumes in same set (if this is a multi-volume work)
+  // 4. Query other volumes in same set (if this is a multi-volume work)
   const otherVolumes = book.volumeCount > 1 || book.volumeType === "MAJMUAT_MUJALLADAT"
     ? await prisma.book.findMany({
         where: {
@@ -118,8 +129,19 @@ export default async function BookDetailPage({ params }: Props) {
           <div className="border-y border-slate-100 py-4 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Price</p>
-              <p className="text-2xl font-black text-slate-900 mt-0.5">GH₵ {Number(book.price).toFixed(2)}</p>
+              {/* ✅ THE UPGRADED PRICE BOUNDARY WRAPPER WITH WHOLESALE MARKUP SWITCHES */}
+              <div className="mt-1">
+                <PriceDisplay
+                  retailPrice={Number(book.price)}
+                  supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
+                  userRole={userRole}
+                  isVerified={isVerified}
+                  showTiered={true}
+                  size="lg"
+                />
+              </div>
             </div>
+            
             <div className="text-right">
               <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Availability</p>
               <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mt-1 transition ${
@@ -141,6 +163,19 @@ export default async function BookDetailPage({ params }: Props) {
               </span>
             </div>
           </div>
+
+          {/* ✅ THE COMPREHENSIVE B2B COMPASSION TIERS DRAWER VIEW (Only for Verified Accounts) */}
+          {userRole && isVerified && (
+            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-2">
+              <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Wholesale Price Matrix
+              </h4>
+              <PriceComparison
+                retailPrice={Number(book.price)}
+                supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
+              />
+            </div>
+          )}
 
           {/* Action Buy Buttons */}
           <AddToCartButton 
@@ -176,12 +211,58 @@ export default async function BookDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Additional Details */}
+          {/* Additional Details & Contextual B2B Marketing Upsell Triggers */}
           {book.publishedYear && (
             <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-xs">
               <span className="text-blue-700 font-semibold">Published:</span> {book.publishedYear} AH
               {book.language && <span className="text-blue-700 font-semibold ml-2">• Language:</span>}
               {book.language && <span className="text-blue-600 ml-1">{book.language}</span>}
+            </div>
+          )}
+
+                    {/* Scenario A: Verified Partner Notification Notice Box */}
+          {userRole && userRole !== "CUSTOMER" && isVerified && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex gap-2.5 items-start">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-bold text-emerald-800">
+                  {userRole === "MALAM" ? "Malam Reseller Pricing Active" : "Madrasah Bulk Terms Unlocked"}
+                </p>
+                <p className="text-emerald-700/90 mt-0.5">
+                  {userRole === "MALAM" 
+                    ? "Your wholesale educator margin slab has been parsed automatically from cost." 
+                    : "Your institutional wholesale values are active for bulk dispatch distribution dispatches."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Scenario B: Application Awaiting Moderation Information Box */}
+          {userRole && !isVerified && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 flex gap-2.5 items-start">
+              <Calendar className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-bold text-blue-800">Application Under Verification Review</p>
+                <p className="text-blue-700/90 mt-0.5">
+                  Abdul is currently validating your submitted institutional credentials. Standard store retail values will apply across the storefront until validation maps completely.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Scenario C: Public Guest Upsell Trigger Banner */}
+          {!userRole && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-2.5 items-start">
+              <Sparkles className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs">
+                <p className="font-bold text-amber-800">Are you an Islamic Educator or School?</p>
+                <p className="text-amber-700/90 mt-0.5">
+                  Unlock partner pricing tiers on all books ≥ 50 GHS. 
+                  <Link href="/malam-apply" className="font-bold text-emerald-800 underline mx-1 hover:text-emerald-900">Become a Malam</Link>
+                  or
+                  <Link href="/madrasah-apply" className="font-bold text-emerald-800 underline ml-1 hover:text-emerald-900">Register your Madrasah</Link>.
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -272,7 +353,7 @@ export default async function BookDetailPage({ params }: Props) {
         </div>
       </section>
 
-      {/* SECTION 6: Other Volumes in This Set (NEW) */}
+      {/* SECTION 6: Other Volumes in This Set */}
       {otherVolumes.length > 0 && (
         <section className="space-y-4 border-t border-slate-100 pt-6">
           <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
@@ -299,10 +380,21 @@ export default async function BookDetailPage({ params }: Props) {
                     </div>
                   )}
                 </div>
-                <div className="mt-2 space-y-0.5">
+                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
                   <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-800 transition">{volBook.title}</h4>
                   <p className="text-[10px] text-slate-500 truncate">By {volBook.author.name}</p>
-                  <p className="text-[11px] font-extrabold text-emerald-700 pt-1">GH₵ {Number(volBook.price).toFixed(2)}</p>
+                  
+                                   {/* ✅ UPGRADED PRICE CONTAINER IN OTHER VOLUMES RECS */}
+                  <div className="pt-1">
+                    <PriceDisplay
+                      retailPrice={Number(volBook.price)}
+                      supplierCost={volBook.supplierCost ? Number(volBook.supplierCost) : null}
+                      userRole={userRole}
+                      isVerified={isVerified}
+                      showTiered={false}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </Link>
             ))}
@@ -337,9 +429,20 @@ export default async function BookDetailPage({ params }: Props) {
                     </div>
                   )}
                 </div>
-                <div className="mt-2 space-y-0.5">
+                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
                   <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-emerald-800 transition">{abook.title}</h4>
-                  <p className="text-[11px] font-extrabold text-emerald-700">GH₵ {Number(abook.price).toFixed(2)}</p>
+                  
+                  {/* ✅ UPGRADED PRICE CONTAINER IN MORE BY SCHOLAR RECS */}
+                  <div className="pt-1">
+                    <PriceDisplay
+                      retailPrice={Number(abook.price)}
+                      supplierCost={abook.supplierCost ? Number(abook.supplierCost) : null}
+                      userRole={userRole}
+                      isVerified={isVerified}
+                      showTiered={false}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </Link>
             ))}
@@ -347,7 +450,7 @@ export default async function BookDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* SECTION 8: Related Books by Science Category */}
+      {/* SECTION 8: Related Islamic Sciences Volumes */}
       {relatedBooks.length > 0 && (
         <section className="space-y-4 border-t border-slate-100 pt-6">
           <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
@@ -374,10 +477,21 @@ export default async function BookDetailPage({ params }: Props) {
                     </div>
                   )}
                 </div>
-                <div className="mt-2 space-y-0.5">
+                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
                   <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-emerald-800 transition">{rbook.title}</h4>
                   <p className="text-[10px] text-slate-500 truncate">By {rbook.author.name}</p>
-                  <p className="text-[11px] font-extrabold text-emerald-700">GH₵ {Number(rbook.price).toFixed(2)}</p>
+                  
+                  {/* ✅ UPGRADED PRICE CONTAINER IN RELATED SCIENCE RECS */}
+                  <div className="pt-1">
+                    <PriceDisplay
+                      retailPrice={Number(rbook.price)}
+                      supplierCost={rbook.supplierCost ? Number(rbook.supplierCost) : null}
+                      userRole={userRole}
+                      isVerified={isVerified}
+                      showTiered={false}
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </Link>
             ))}
@@ -387,3 +501,5 @@ export default async function BookDetailPage({ params }: Props) {
     </div>
   );
 }
+
+

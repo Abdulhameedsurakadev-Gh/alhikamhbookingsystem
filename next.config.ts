@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // 🚀 v2.0 B2B INJECTION: Overrides default 1MB Server Action boundary constraints
+  // Allows institutional applicant uploads to pass smoothly up to 10MB
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default nextConfig;

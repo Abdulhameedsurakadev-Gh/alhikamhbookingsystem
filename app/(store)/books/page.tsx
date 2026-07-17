@@ -7,6 +7,10 @@ import { Search, X, BookOpen, Star, Sparkles, AlertCircle } from "lucide-react";
 import { SortDropdown } from "./SortDropdown";
 import { BookRequestCTA } from "../../components/shared/BookRequestCTA";
 
+// ✅ v2.0 B2B AUTHENTICATED TIER PRICE INTEGRATIONS
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { PriceDisplay } from "./PriceDisplay";
 
 interface SearchParams {
   search?: string;
@@ -38,7 +42,15 @@ export default async function BooksPage({
   // Pagination Configuration 
   const BOOKS_PER_PAGE = 12; // Standard view limit per load batch
   const currentPage = Math.max(1, parseInt(params.page || "1", 10));
-  const skip = (currentPage - 1) * BOOKS_PER_PAGE;
+
+  // ✅ SECURE ENGINE SEED: Fetch complete user session context concurrently with database aggregations
+  const [session, categories] = await Promise.all([
+    auth.api.getSession({ headers: await headers() }),
+    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } })
+  ]);
+
+  const userRole = session?.user?.role || null;
+  const isVerified = (session?.user as any)?.verificationStatus === "APPROVED";
 
   // 1. Build Unified Prisma Dynamic Conditions Object
   const whereClause: any = {};
@@ -63,8 +75,8 @@ export default async function BooksPage({
   if (sort === "title-az") orderByClause = { title: "asc" };
   if (sort === "title-za") orderByClause = { title: "desc" };
 
-  // 3. Execute DB Operations (Running parallel queries for high processing velocity)
-  const [allBooks, totalFilteredCount, totalStoreCount, categories] = await Promise.all([
+  // 3. Parallel Query Runner for high processing velocity
+  const [allBooks, totalFilteredCount] = await Promise.all([
     prisma.book.findMany({
       where: whereClause,
       include: { author: true, category: true, explanations: true },
@@ -72,11 +84,9 @@ export default async function BooksPage({
       take: currentPage * BOOKS_PER_PAGE, // Pulls cumulative counts to support "Load More" appends smoothly
     }),
     prisma.book.count({ where: whereClause }), // Filtered criteria count
-    prisma.book.count(), // absolute catalog maximum limit
-    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } })
   ]);
 
-  // Fetch contextual carousels only when no active filter constraints are present
+  // Fetch contextual discovery feeds only when no active filter constraints are applied
   const hasActiveFilters = search || categorySlug || level || textType || coverType || volumeType;
   
   const newArrivals = !hasActiveFilters
@@ -87,7 +97,7 @@ export default async function BooksPage({
     ? await prisma.book.findMany({ where: { knowledgeLevel: "MUBTADI" }, take: 5, include: { author: true, category: true } })
     : [];
 
-  // Helper url modifier path assembly logic
+  // Helper URL modifier path assembly logic
   const getRemoveFilterUrl = (keyToDelete: string) => {
     const activeKeys = { ...params };
     delete (activeKeys as any)[keyToDelete];
@@ -97,8 +107,6 @@ export default async function BooksPage({
     });
     return `/books?${searchParams.toString()}`;
   };
-
-  const hasNextPage = totalFilteredCount > allBooks.length;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-16">
@@ -164,6 +172,7 @@ export default async function BooksPage({
             </div>
           </section>
 
+                    {/* New Arrivals list slider */}
           {newArrivals.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
@@ -185,10 +194,21 @@ export default async function BooksPage({
                         </div>
                       )}
                     </div>
-                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
+                    <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
                       <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
                       <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+                      
+                      {/* ✅ UNIFIED PRICE MATRIX HOOK FOR ARRIVALS BANNER */}
+                      <div className="pt-1">
+                        <PriceDisplay
+                          retailPrice={Number(book.price)}
+                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
+                          userRole={userRole}
+                          isVerified={isVerified}
+                          showTiered={false}
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   </Link>
                 ))}
@@ -196,6 +216,7 @@ export default async function BooksPage({
             </section>
           )}
 
+          {/* Beginner Friendly list slider */}
           {beginnerFriendly.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
@@ -217,10 +238,21 @@ export default async function BooksPage({
                         </div>
                       )}
                     </div>
-                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
+                    <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
                       <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
                       <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+                      
+                      {/* ✅ UNIFIED PRICE MATRIX HOOK FOR BEGINNER FEEDS */}
+                      <div className="pt-1">
+                        <PriceDisplay
+                          retailPrice={Number(book.price)}
+                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
+                          userRole={userRole}
+                          isVerified={isVerified}
+                          showTiered={false}
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   </Link>
                 ))}
@@ -267,30 +299,23 @@ export default async function BooksPage({
         </div>
       )}
 
-      {/* Combined Responsive Filtering Panel Layout Grid Wrapper */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start pt-2">
-        <aside className="lg:col-span-1">
-          <FilterSidebar categories={categories} activeFilters={params} />
+      {/* Main Split Grid View System */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left Floating Desktop Filtering Column Sidebar */}
+        <aside className="hidden lg:block lg:col-span-1 sticky top-6">
+          <FilterSidebar activeFilters={params} categories={categories} />
         </aside>
 
+        {/* Dynamic Display Catalog Content Output Stream */}
         <main className="lg:col-span-3 space-y-4">
           
-          {/* Catalog Controls: Statistics Indicator & Sorting Action Dropdown Selector */}
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 px-1">
-            
-            {/* Catalog Statistics (Feature 11) */}
-            <div className="text-xs text-slate-500 font-medium">
-              {totalFilteredCount === 0 ? (
-                <span>0 Books Found</span>
-              ) : (
-                <span>
-                  Showing{" "} <span className="font-semibold text-slate-800">{allBooks.length}</span>{" "} of {""} 
-                  <span className="font-semibold text-slate-800">{totalFilteredCount}</span>{" "} Books
-                </span>
-              )}
+          {/* List Metadata Header Info Drawer */}
+          <div className="flex items-center justify-between gap-4 bg-slate-50 border border-slate-200/60 p-4 rounded-xl shadow-sm">
+            <div className="text-xs font-semibold text-slate-600">
+              Found <span className="text-slate-900 font-bold">{totalFilteredCount}</span> authentic volumes {hasActiveFilters && "matching parameters"}
             </div>
-
-            {/* Sorting Interactive Control (Feature 6) */}
+            
+            {/* Sorting Interactive Control */}
             <SortDropdown currentSort={sort} />
           </div>
 
@@ -303,12 +328,12 @@ export default async function BooksPage({
             </div>
           ) : (
             <div>
-              {/* Layout transformation: Single structural rows on smaller breakpoints, three-tier grid slots on desktop */}
+              {/* Responsive Grid System: Row stacks on mobile, clean triple columns on large viewports */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {allBooks.map((book) => (
                   <div key={book.id} className={`flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative ${!book.available ? "opacity-60" : ""}`}>
                     
-                    {/* Imagery Canvas Node */}
+                                  {/* Imagery Canvas Node */}
                     <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
                       {book.coverImage ? (
                         <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-300" />
@@ -316,7 +341,7 @@ export default async function BooksPage({
                         <span className="text-[10px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
                       
-                      {/* Out of Stock Overlay */}
+                      {/* Out of Stock Status Layer */}
                       {!book.available && (
                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                           <div className="flex flex-col items-center gap-1">
@@ -326,13 +351,13 @@ export default async function BooksPage({
                         </div>
                       )}
                       
-                      {/* Top Corner Structural Text Class Indicator Label Tag */}
-                      <span className="absolute top-1.5 right-1.5 bg-emerald-800 text-amber-100 font-mono text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shadow">
+                      {/* Text Classification Tag Overlay */}
+                      <span className="absolute top-1.5 right-1.5 bg-emerald-800 text-amber-100 font-mono text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shadow z-10">
                         {book.textType}
                       </span>
                     </div>
 
-                    {/* Operational Information Columns */}
+                    {/* Operational Information Description Text Blocks */}
                     <div className="flex-1 flex flex-col justify-between lg:justify-start lg:space-y-1">
                       <div>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">
@@ -346,16 +371,22 @@ export default async function BooksPage({
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-slate-100">
-                        <span className="text-sm lg:text-base font-bold text-slate-900">
-                          GH₵ {Number(book.price).toFixed(2)}
-                        </span>
+                      {/* ✅ AUTOMATED v2.0 B2B TIERS AND SAVE BADGE MANAGER SWITCH CONTAINER */}
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-slate-100 gap-2">
+                        <PriceDisplay
+                          retailPrice={Number(book.price)}
+                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
+                          userRole={userRole}
+                          isVerified={isVerified}
+                          showTiered={true}
+                          size="sm"
+                        />
                         <Link
                           href={`/books/${book.id}`}
-                          className={`font-semibold px-3 py-1.5 rounded-md text-xs transition ${
+                          className={`font-semibold px-3 py-1.5 rounded-md text-xs transition h-fit ${
                             book.available
                               ? "bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700"
-                              : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                              : "bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none"
                           }`}
                         >
                           {book.available ? "View Book" : "Out"}
@@ -366,10 +397,10 @@ export default async function BooksPage({
                   </div>
                 ))}
               </div>
-              </div>
+            </div>
           )}
           
-          {/* "Load More" Append Control Element (Feature 7) */}
+          {/* "Load More" Append Control Element */}
           {allBooks.length < totalFilteredCount && (
             <div className="flex justify-center pt-6">
               <Link
@@ -387,6 +418,8 @@ export default async function BooksPage({
               </Link>
             </div>
           )}
+
+          {/* Requisition Form Footer Segments */}
           <BookRequestCTA />
         </main>
       </div>

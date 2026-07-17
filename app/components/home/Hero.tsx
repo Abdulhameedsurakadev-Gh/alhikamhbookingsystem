@@ -1,3 +1,4 @@
+// app/components/home/Hero.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -7,12 +8,8 @@ import {
   BookOpen,
   GraduationCap,
   Search,
-  CheckCircle,
-  Truck,
-  CreditCard,
-  Layers,
-  TrendingUp,
-  Star,
+  Check,
+  Award,
 } from "lucide-react";
 import { useCartStore } from "../../../store/useCartStore";
 
@@ -66,84 +63,80 @@ export function Hero({ heroStats }: HeroProps) {
   };
 
   return (
-    <div className="relative bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white overflow-hidden border-b border-emerald-900/30">
-      {/* Subtle Visual Geometric Grid Layer */}
-      <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]" />
+    /* 
+      System Fit: 
+      - Replaced dark emerald/slate gradient loop with clean warm paper canvas background.
+      - Enforces core roasted-coffee brown typography color tokens throughout.
+    */
+    <div className="relative bg-background text-foreground overflow-hidden border-b border-border/40 py-12 sm:py-16">
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
+        
+        {/* ==========================================================================
+            SECTION 1: DISCIPLINED ACADEMIC HEADING AREA
+           ========================================================================== */}
+        <div className="max-w-3xl mx-auto text-center space-y-4">
+          {/* System Badge Rule: Muted sand tone, line-stroke icon, zero floating emoji fragments */}
+          <div className="flex justify-center">
+            <span className="inline-flex items-center gap-2 px-3 py-0.5 rounded-sm bg-secondary text-secondary-foreground text-xs font-semibold uppercase tracking-wider">
+              Authentic Islamic Literature
+            </span>
+          </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 relative z-10">
-        {/* ============================================
-            SECTION 1: HEADER + HEADLINE + COPY
-        ============================================ */}
-        <div className="max-w-3xl mx-auto text-center mb-10 space-y-4">
-          {/* Authority Badge */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold font-mono tracking-wider uppercase">
-            📚 Authentic Islamic Books for Students of Knowledge
-          </span>
-
-          {/* Main Headline - Clean & Concise */}
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight font-serif text-slate-100 leading-tight">
-            Build Your Islamic Library <br />
-            <span className="text-emerald-400">With Trusted Scholarly Works</span>
+          {/* Typography Pairings: Strict Serif Playfair Headings */}
+          <h1 className="text-display font-bold font-serif text-foreground leading-tight tracking-tight">
+            Building Libraries of Beneficial Knowledge
           </h1>
 
-          {/* Supporting Copy */}
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            Explore carefully selected books in Aqeedah, Fiqh, Hadith, Tafsir, Arabic, Seerah, and other Islamic sciences from reliable publishers and scholars.
+          <p className="text-body text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            Explore a carefully selected repository of works across Aqeedah, Fiqh, Hadith, Tafsir, Arabic, and Seerah, sourced specifically to support serious students of knowledge and families.
           </p>
         </div>
 
-        {/* ============================================
-            SECTION 2: STATS CARDS
-        ============================================ */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-black text-emerald-400">
-              {heroStats.totalBooks}
-            </p>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Books in Catalog</p>
-          </div>
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-black text-blue-400">
-              {heroStats.totalCategories}
-            </p>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Disciplines</p>
-          </div>
-          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-black text-purple-400">
-              {heroStats.totalAuthors}+
-            </p>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Scholars</p>
-          </div>
-          <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-black text-orange-400">
-              {heroStats.totalShipping}+
-            </p>
-            <p className="text-xs text-slate-400 mt-1 font-medium">In Stock</p>
-          </div>
+        {/* ==========================================================================
+            SECTION 2: INTEGRATED METRICS COUNTERS (Unified Design Language)
+           ========================================================================== */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {[
+            { value: heroStats.totalBooks, label: "Volumes in Catalogue" },
+            { value: heroStats.totalCategories, label: "Core Disciplines" },
+            { value: heroStats.totalAuthors, label: "Classical Scholars" },
+            { value: heroStats.totalShipping, label: "Available in Stock" },
+          ].map((stat, i) => (
+            <div key={i} className="bg-card border border-border/60 rounded-sm p-4 text-center select-none">
+              {/* Removed corporate blue/purple/orange color text maps */}
+              <p className="text-heading font-sans font-bold text-foreground">
+                {stat.value}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 font-medium tracking-wide">
+                {stat.label}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* ============================================
-            SECTION 3: SEARCH + CTA BUTTONS (SIDE BY SIDE)
-        ============================================ */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-          {/* Search Bar - Takes 2 columns on desktop */}
+        {/* ==========================================================================
+            SECTION 3: ELEVATED DISCOVERY ENGINE & QUICK ACTIONS (Stacked Rhythm)
+           ========================================================================== */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto items-end pt-2">
+          {/* Main Centralized Search Container Anchor */}
           <div className="lg:col-span-2 space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Quick Search
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Search the Repository
             </label>
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <div className="relative">
-                <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 stroke-[1.5]" />
                 <input
                   type="text"
-                  placeholder="Search by title, author, or subject..."
+                  placeholder="Search by book title, classical author, or publisher..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-12 pl-11 pr-24 rounded-xl border border-slate-800 bg-slate-950/60 focus:outline-none focus:border-emerald-500 text-sm font-medium text-slate-200 placeholder-slate-500 shadow-sm transition"
+                  className="w-full h-12 pl-11 pr-24 rounded-sm border border-border bg-card text-foreground font-sans text-label placeholder:text-muted-foreground/50 outline-none transition-all duration-normal ease-standard focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/10"
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 top-1.5 h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition cursor-pointer"
+                  className="absolute right-1.5 top-1.5 h-9 px-4 rounded-sm bg-primary hover:bg-primary/90 text-primary-foreground font-sans font-medium text-xs transition-colors duration-fast ease-standard cursor-pointer"
                 >
                   Search
                 </button>
@@ -151,148 +144,122 @@ export function Hero({ heroStats }: HeroProps) {
             </form>
           </div>
 
-          {/* Primary CTAs */}
+          {/* Catalog Index Link Actions */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Quick Actions
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Explore Collections
             </label>
             <Link
               href="/books"
-              className="flex items-center justify-center gap-2 h-12 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-emerald-950/20 w-full cursor-pointer"
+              className="flex items-center justify-center gap-2 h-12 px-6 bg-card hover:bg-secondary/20 text-foreground font-sans font-medium text-label rounded-sm border border-border transition-colors duration-fast ease-standard w-full cursor-pointer"
             >
-              <BookOpen className="w-4 h-4" /> Browse All Books
+              <BookOpen className="w-4 h-4 text-primary" /> 
+              <span>Browse Full Catalogue</span>
             </Link>
           </div>
         </div>
 
-        {/* ============================================
-            SECTION 4: FEATURED BOOK + TRUST BADGES (2 COLUMN)
-        ============================================ */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          {/* LEFT: Featured Book */}
-          {heroStats.featuredBook && (
-            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-orange-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-orange-400">
-                  Featured This Week
-                </span>
-              </div>
+                {/* ==========================================================================
+            SECTION 4: RECOMMENDATION EMBED & VALUES MAPPING (Split Layout)
+           ========================================================================== */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start max-w-5xl mx-auto pt-4">
+          
+          {/* LEFT PANELS: Curated Recommendation Spot Frame (Occupies 3 Columns) */}
+          <div className="lg:col-span-3">
+            {heroStats.featuredBook && (
+              <div className="bg-card border border-border rounded-sm p-6 space-y-4 shadow-subtle">
+                <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+                  <Award className="w-4 h-4 text-primary stroke-[1.5]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Selected Recommendation
+                  </span>
+                </div>
 
-              {/* Featured Book Card */}
-              <div className="grid grid-cols-3 gap-4 items-start">
-                {/* Book Cover */}
-                {heroStats.featuredBook.coverImage && (
-                  <div className="col-span-1">
-                    <img
-                      src={heroStats.featuredBook.coverImage}
-                      alt={heroStats.featuredBook.title}
-                      className="w-full aspect-[3/4] object-cover rounded-lg border border-slate-600 shadow-lg"
-                    />
-                  </div>
-                )}
+                <div className="grid grid-cols-3 gap-6 items-start">
+                  {heroStats.featuredBook.coverImage && (
+                    <div className="col-span-1">
+                      <img
+                        src={heroStats.featuredBook.coverImage}
+                        alt={heroStats.featuredBook.title}
+                        className="w-full aspect-[3/4] object-cover rounded-sm border border-border/80 shadow-none bg-background"
+                      />
+                    </div>
+                  )}
 
-                {/* Book Info */}
-                <div className={`${heroStats.featuredBook.coverImage ? "col-span-2" : "col-span-3"} space-y-3`}>
-                  <div className="space-y-1">
-                    <h3 className="font-serif font-bold text-sm text-slate-100 line-clamp-2">
-                      {heroStats.featuredBook.title}
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      By {heroStats.featuredBook.authorName}
-                    </p>
-                  </div>
+                  <div className={`${heroStats.featuredBook.coverImage ? "col-span-2" : "col-span-3"} space-y-4`}>
+                    <div className="space-y-1">
+                      <h3 className="font-serif font-bold text-title text-foreground leading-tight line-clamp-2">
+                        {heroStats.featuredBook.title}
+                      </h3>
+                      <p className="text-label text-muted-foreground font-medium">
+                        by {heroStats.featuredBook.authorName}
+                      </p>
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                    <span className="text-xs font-bold text-slate-300">Highly Rated</span>
-                  </div>
+                    <div className="pt-2 border-t border-border/50 space-y-3">
+                      <p className="text-title font-sans font-semibold text-foreground">
+                        GH₵{parseFloat(heroStats.featuredBook.price).toFixed(2)}
+                      </p>
 
-                  <div className="space-y-2 pt-2 border-t border-slate-700">
-                    <p className="text-sm font-black text-emerald-400">
-                      GH₵{parseFloat(heroStats.featuredBook.price).toFixed(2)}
-                    </p>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleAddFeaturedToCart}
-                        className={`flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold py-2 rounded-lg transition-all ${
-                          addedToCart
-                            ? "bg-emerald-600 text-white"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                        }`}
-                      >
-                        {addedToCart ? "✓ Added" : "Add to Cart"}
-                      </button>
-                      <Link
-                        href={`/books/${heroStats.featuredBook.id}`}
-                        className="flex-1 inline-flex items-center justify-center text-xs font-bold py-2 rounded-lg border border-slate-600 hover:border-emerald-500 hover:text-emerald-400 transition-all"
-                      >
-                        View Details
-                      </Link>
+                      <div className="flex gap-3">
+                        <Link
+                          href={`/books/${heroStats.featuredBook.id}`}
+                          className="flex-1 inline-flex items-center justify-center text-xs font-medium py-2 rounded-sm border border-border bg-background hover:bg-card text-foreground transition-colors duration-fast ease-standard"
+                        >
+                          View Details
+                        </Link>
+                        <button
+                          onClick={handleAddFeaturedToCart}
+                          className="flex-1 inline-flex items-center justify-center text-xs font-medium py-2 rounded-sm bg-primary hover:bg-primary/90 text-primary-foreground transition-colors duration-fast ease-standard"
+                        >
+                          {addedToCart ? "✓ Added" : "Add to Cart"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* RIGHT: Trust Badges */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-              Why Choose Al-Hikmah
+          {/* RIGHT PANELS: Restrained Value Claims Checklist (Occupies 2 Columns) */}
+          <div className="lg:col-span-2 space-y-5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground border-b border-border/50 pb-2">
+              The Al-Hikmah Promise
             </h3>
 
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 bg-slate-900/50 border border-slate-800 rounded-lg p-3">
-                <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-slate-200">Authentic Publications</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Curated works from reliable publishers and scholars
-                  </p>
+            <div className="space-y-4">
+              {[
+                { title: "Verified Authenticity", desc: "Texts verified to stem from precise publisher prints and reliable text collections." },
+                { title: "Regional Courier Delivery", desc: "Reliable distribution channels routing parcels safely across Kasoa, Accra, and greater Ghana." },
+                { title: "Protected Transactions", desc: "Fully integrated checkout handling local Mobile Money and cards via Paystack systems safely." },
+                { title: "Structured Curriculum Paths", desc: "Literature catalogued explicitly by complexity parameters matching your individual progression." }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-start gap-3 select-none">
+                  {/* Thin line checkmark icons set to primary terracotta clay color */}
+                  <div className="p-1 rounded-full bg-secondary/30 text-primary shrink-0 mt-0.5">
+                    <Check className="h-3 w-3 stroke-[2.5]" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground uppercase tracking-wide">{item.title}</p>
+                    <p className="text-label text-muted-foreground leading-normal">{item.desc}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-slate-900/50 border border-slate-800 rounded-lg p-3">
-                <Truck className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-slate-200">Nationwide Delivery</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Fast, secure delivery across all regions of Ghana
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-slate-900/50 border border-slate-800 rounded-lg p-3">
-                <CreditCard className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-slate-200">Secure Payments</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Mobile money, cards, and bank transfers via Paystack
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-slate-900/50 border border-slate-800 rounded-lg p-3">
-                <Layers className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-slate-200">Structured Learning</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Books organized by knowledge level and discipline
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* Secondary CTA */}
-            <Link
-              href="#study-tracks"
-              className="flex items-center justify-center gap-2 w-full py-3 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-bold text-sm rounded-xl border border-slate-800 transition-all cursor-pointer mt-2"
-            >
-              <GraduationCap className="w-4 h-4 text-emerald-400" /> Explore Study Levels
-            </Link>
+            {/* Curriculum Jump Point */}
+            <div className="pt-2">
+              <Link
+                href="#study-tracks"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-card hover:bg-secondary/20 text-foreground font-sans font-medium text-label rounded-sm border border-border/80 transition-colors duration-fast ease-standard cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4 text-primary stroke-[1.5]" /> 
+                <span>Explore Structured Learning Paths</span>
+              </Link>
+            </div>
           </div>
+
         </div>
       </div>
     </div>

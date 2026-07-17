@@ -1,6 +1,7 @@
+// app/components/home/SubjectChips.tsx
 import React from "react";
 import Link from "next/link";
-import { BookOpen, Scale, BookMarked, BookText, Languages, Users } from "lucide-react";
+import { Library, Scale, Bookmark, FileText, Languages, History, HelpCircle } from "lucide-react";
 
 interface CategoryStats {
   id: string;
@@ -13,63 +14,76 @@ interface SubjectChipsProps {
   categoryStats: CategoryStats[];
 }
 
-// Map category names to appropriate icons
 const getCategoryIcon = (slug: string) => {
   const iconMap: { [key: string]: React.ReactNode } = {
-    aqeedah: <BookOpen className="w-4 h-4" />,
-    fiqh: <Scale className="w-4 h-4" />,
-    quran: <BookMarked className="w-4 h-4" />,
-    hadith: <BookText className="w-4 h-4" />,
-    tafsir: <BookText className="w-4 h-4" />,
-    arabic: <Languages className="w-4 h-4" />,
-    seerah: <Users className="w-4 h-4" />,
-    lugha: <Languages className="w-4 h-4" />,
+    aqeedah: <Library className="w-3.5 h-3.5 stroke-[1.5]" />,
+    fiqh: <Scale className="w-3.5 h-3.5 stroke-[1.5]" />,
+    quran: <Bookmark className="w-3.5 h-3.5 stroke-[1.5]" />,
+    hadith: <FileText className="w-3.5 h-3.5 stroke-[1.5]" />,
+    tafsir: <FileText className="w-3.5 h-3.5 stroke-[1.5]" />,
+    arabic: <Languages className="w-3.5 h-3.5 stroke-[1.5]" />,
+    seerah: <History className="w-3.5 h-3.5 stroke-[1.5]" />,
+    lugha: <Languages className="w-3.5 h-3.5 stroke-[1.5]" />,
   };
-  return iconMap[slug] || <BookOpen className="w-4 h-4" />;
+  return iconMap[slug] || <HelpCircle className="w-3.5 h-3.5 stroke-[1.5]" />;
 };
 
 export function SubjectChips({ categoryStats }: SubjectChipsProps) {
+  const disciplineOrder = ["aqeedah", "quran", "fiqh", "hadith", "tafsir", "seerah", "arabic", "lugha"];
+
+  const sortedCategories = [...categoryStats].sort((a, b) => {
+    const idxA = disciplineOrder.indexOf(a.slug);
+    const idxB = disciplineOrder.indexOf(b.slug);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+  });
+
+  const totalBooksCount = categoryStats.reduce((sum, cat) => sum + cat.bookCount, 0);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-          Explore Core Islamic Disciplines
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-4">
+
+      <div className="space-y-1">
+        <h3 className="font-serif text-title font-bold text-foreground">
+          Browse by Discipline
         </h3>
-        <p className="text-[11px] text-slate-500 mt-0.5">
-          Browse our curated collection across all major fields of Islamic scholarship
+        <p className="font-sans text-label text-muted-foreground leading-relaxed">
+          Discover traditional volumes arranged according to the foundational sciences of Islamic knowledge.
         </p>
       </div>
 
-      {/* Horizontal Scroll Containers on mobile view, structural flex wrap on desktop */}
-      <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-2 sm:pb-0 sm:flex-wrap mask-image">
-        {categoryStats.map((cat) => (
+      <div className="flex items-center gap-3 overflow-x-auto pb-3 sm:pb-0 sm:flex-wrap scrollbar-none scroll-smooth">
+        {sortedCategories.map((cat) => (
           <Link
             key={cat.id}
             href={`/books?category=${cat.slug}`}
-            className="group inline-flex items-center gap-2.5 px-4 py-2.5 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 hover:border-emerald-500 hover:bg-emerald-50/30 shadow-sm transition-all whitespace-nowrap shrink-0"
+            /*
+              Before: hover:bg-secondary/20 hover:border-primary/40
+              After:  hover:bg-surface-hover hover:border-border-hover
+              Same visual result — now it's a named decision instead of a
+              fraction someone has to remember and retype correctly.
+            */
+            className="group inline-flex items-center gap-3 px-4 py-2.5 bg-card border border-border/80 rounded-sm text-label font-medium text-foreground transition-colors duration-fast ease-standard hover:bg-surface-hover hover:border-border-hover whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <span className="text-slate-500 group-hover:text-emerald-700 transition-colors">
+            <span className="text-primary transition-colors">
               {getCategoryIcon(cat.slug)}
             </span>
-            <span>{cat.name}</span>
-            <span className="inline-flex items-center justify-center h-5 min-w-5 bg-slate-100 group-hover:bg-emerald-100 text-slate-600 group-hover:text-emerald-700 rounded-full text-[10px] font-bold transition-colors">
-              {cat.bookCount}
+
+            <span className="font-sans">{cat.name}</span>
+
+            <span className="inline-flex items-center justify-center px-1.5 py-0.5 bg-background border border-border/40 text-muted-foreground text-[10px] font-bold rounded-sm transition-colors group-hover:text-primary group-hover:border-primary/20">
+              {cat.bookCount} vol
             </span>
           </Link>
         ))}
       </div>
 
-      {/* Total catalog stat bar */}
-      <div className="text-[11px] text-slate-500 font-medium pt-1">
-        📚 Total:{" "}
-        <span className="font-bold text-slate-700">
-          {categoryStats.reduce((sum, cat) => sum + cat.bookCount, 0)} books
-        </span>{" "}
-        across{" "}
-        <span className="font-bold text-slate-700">
-          {categoryStats.length} disciplines
-        </span>
+      <div className="text-xs text-muted-foreground font-medium pt-1 border-t border-border/30 flex items-center gap-1.5 select-none">
+        <span>Catalogue Summary:</span>
+        <span className="font-bold text-foreground">{totalBooksCount} volumes</span>
+        <span className="text-border">•</span>
+        <span className="font-bold text-foreground">{categoryStats.length} primary sciences indexed</span>
       </div>
-    </div>
+
+    </section>
   );
 }

@@ -1,8 +1,8 @@
 // services/homepage.ts
-import { prisma } from "../lib/prisma"; // Direct mapping matching your exact import path
+import { prisma } from "../lib/prisma";
 
 // ==========================================================================
-// STRICT VIEW MODEL CONTRACTS (Preserves existing application signatures)
+// STRICT VIEW MODEL CONTRACTS
 // ==========================================================================
 
 export interface SanitizedBook {
@@ -20,14 +20,16 @@ export interface LevelStat {
   books: SanitizedBook[];
 }
 
+// [key: string]: any removed — it was hiding the raw, unsanitized `books`
+// array (with Prisma Decimal prices) leaking through the ...scholar spread
+// below. Explicit fields only, so the compiler can actually catch this.
 export interface ScholarStat {
   id: string;
   name: string;
-  slug: string;
-  diedAH: number | null | string; // Matches your model property rules
+  nameArabic: string | null;
+  diedAH: string | null;
   bookCount: number;
   featuredBooks: SanitizedBook[];
-  [key: string]: any; // Catch-all fallback safely protecting extra database traits
 }
 
 export interface CategoryStat {
@@ -35,7 +37,6 @@ export interface CategoryStat {
   name: string;
   slug: string;
   bookCount: number;
-  [key: string]: any;
 }
 
 export interface HeroStats {
@@ -55,12 +56,16 @@ export interface HomepageViewModel {
   sanitizedNewBooks: SanitizedBook[];
 }
 
+export interface NavMenuData {
+  categories: Array<{ id: string; name: string; slug: string; parentId: string | null }>;
+  featuredAuthors: Array<{ id: string; name: string; diedAH: string | null }>;
+}
+
 // ==========================================================================
 // THE EXTRACTION ENGINE
 // ==========================================================================
 
 export async function getHomepageContent(): Promise<HomepageViewModel> {
-  // --- Standardized Book Sanitizer Module ---
   const sanitizeBook = (b: any): SanitizedBook => ({
     id: b.id,
     title: b.title,
@@ -70,7 +75,6 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
     available: b.available,
   });
 
-  // 🏎️ PHASE 1: Massive Parallel Fetching Core (Squashes structural waiting)
   const [
     categoriesRaw,
     activeScholarsRaw,
@@ -88,7 +92,6 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
     intermediateCount,
     advancedCount
   ] = await Promise.all([
-    // Categories with Inline Aggregation (Replaces the slow loops)
     prisma.category.findMany({
       where: { parentId: null },
       take: 8,
@@ -97,7 +100,6 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
         _count: { select: { books: true } }
       }
     }),
-    // Scholars with Inline Pre-Fetched Relationships (Replaces the nested loops)
     prisma.author.findMany({
       take: 4,
       orderBy: { diedAH: "asc" },
@@ -134,9 +136,11 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
       include: { author: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    // Fixed: was missing knowledgeLevel entirely, silently pulling any
+    // available book regardless of level under the "Advanced" section.
     prisma.book.findMany({
-      where: { available: true }, // Keeping exact logic constraint matching your file
-      take: 4,
+      where: { knowledgeLevel: "MUTAQADDIM", available: true },
+      take: 3,
       include: { author: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -145,18 +149,15 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
       include: { author: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    // Global metric counts mapping
     prisma.book.count(),
     prisma.category.count({ where: { parentId: null } }),
     prisma.author.count(),
     prisma.book.count({ where: { available: true } }),
-    // Level totals counts mapping
     prisma.book.count({ where: { knowledgeLevel: "MUBTADI" } }),
     prisma.book.count({ where: { knowledgeLevel: "MUTAWASSIT" } }),
     prisma.book.count({ where: { knowledgeLevel: "MUTAQADDIM" } }),
   ]);
 
-  // 🛠️ PHASE 2: View Model Synthesis & Cleaning 
   const sanitizedNewBooks = newBooksRaw.map(sanitizeBook);
   const sanitizedFeaturedBooks = featuredBooksRaw.map(sanitizeBook);
   const sanitizedFeaturedBook = featuredBookRaw ? sanitizeBook(featuredBookRaw) : null;
@@ -167,16 +168,23 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
     { level: "MUTAQADDIM", count: advancedCount, books: advancedBooksRaw.map(sanitizeBook) },
   ];
 
-  // Map high-performance scholars bundle payload
+  // Fixed: no longer spreads the raw scholar object. Only the explicit,
+  // sanitized fields are returned — the raw `books` relation (with Decimal
+  // prices) never leaves this function, so it can't crash a Client
+  // Component's props further down the tree.
   const scholarStats: ScholarStat[] = activeScholarsRaw.map((scholar) => ({
-    ...scholar,
+    id: scholar.id,
+    name: scholar.name,
+    nameArabic: scholar.nameArabic,
+    diedAH: scholar.diedAH,
     bookCount: scholar._count.books,
     featuredBooks: scholar.books.map(sanitizeBook),
   }));
 
-  // Map high-performance categories bundle payload
   const categoryStats: CategoryStat[] = categoriesRaw.map((cat) => ({
-    ...cat,
+    id: cat.id,
+    name: cat.name,
+    slug: cat.slug,
     bookCount: cat._count.books,
   }));
 
@@ -188,7 +196,6 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
     featuredBook: sanitizedFeaturedBook,
   };
 
-  // Deliver the complete decoupled dataset
   return {
     heroStats,
     categoryStats,
@@ -197,4 +204,26 @@ export async function getHomepageContent(): Promise<HomepageViewModel> {
     scholarStats,
     sanitizedNewBooks,
   };
+}
+
+/**
+ * Fetches navigation metadata (categories + featured authors) in parallel,
+ * called once from the layout instead of independently inside Navbar.
+ */
+export async function getNavigationMetadata(): Promise<NavMenuData> {
+  const [categories, featuredAuthors] = await Promise.all([
+    prisma.category.findMany({
+      where: { parentId: null },
+      take: 9,
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true, parentId: true },
+    }),
+    prisma.author.findMany({
+      take: 5,
+      orderBy: { diedAH: "asc" },
+      select: { id: true, name: true, diedAH: true },
+    }),
+  ]);
+
+  return { categories, featuredAuthors };
 }

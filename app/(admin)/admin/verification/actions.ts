@@ -7,7 +7,9 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Generate a simple temporary password
+/**
+ * Generates a temporary 12-character alphanumeric code for the student or reseller.
+ */
 function generateTemporaryPassword(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let password = "";
@@ -19,7 +21,6 @@ function generateTemporaryPassword(): string {
 
 export async function approveApplication(userId: string, verificationNotes: string) {
   try {
-    // Fetch user
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, name: true, role: true },
@@ -29,10 +30,8 @@ export async function approveApplication(userId: string, verificationNotes: stri
       return { success: false, error: "User not found" };
     }
 
-    // Generate temporary password
     const tempPassword = generateTemporaryPassword();
 
-    // Update user: approved + verified timestamp
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -43,58 +42,64 @@ export async function approveApplication(userId: string, verificationNotes: stri
       },
     });
 
-    // Send approval email with credentials
     const roleText = user.role === "MALAM" ? "Teacher Reseller" : "Institution";
+    const pricingText = user.role === "MALAM" ? "wholesale pricing" : "institutional catalog pricing";
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
 
+    // 🎨 Upgraded Email Template: Translating Design System v1.0 into raw HTML/Inline Styles
     await resend.emails.send({
-      from: "noreply@alhikmahbookstore.com",
+      from: "alhikmhbookstore93@gmail.com",
       to: user.email!,
-      subject: `✅ Welcome to Al-Hikmah ${roleText} Program!`,
+      subject: `✅ Application Approved — Al-Hikmah ${roleText} Program`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f8f8;">
-          <div style="background: white; padding: 30px; border-radius: 10px; border-left: 4px solid #059669;">
-            <h1 style="color: #059669; margin-top: 0;">Alhamdulillah! You're Verified 🎉</h1>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 16px; background-color: #F7F4F0; color: #261E1A;">
+          <div style="background-color: #F3EFE9; padding: 40px; border-radius: 4px; border: 1px solid #DDD8D1; border-top: 4px solid #6B3522;">
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            <p style="font-family: Georgia, serif; font-size: 20px; font-weight: bold; color: #261E1A; margin-top: 0; margin-bottom: 24px;">
+              Al-Hikmah Islamic Bookstore
+            </p>
+            
+            <p style="font-size: 15px; line-height: 1.6; margin-bottom: 16px;">
               As-salamu alaikum wa rahmatullahi wa barakatuh,
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">
-              Your application to become an Al-Hikmah <strong>${roleText}</strong> has been <strong>approved</strong>!
+            <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+              We are pleased to inform you that your application to become verified as an Al-Hikmah <strong>${roleText}</strong> has been carefully reviewed and <strong>approved</strong>.
             </p>
 
-            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #d1fae5;">
-              <h3 style="color: #059669; margin-top: 0;">Your Login Details</h3>
-              <p style="color: #333; margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
-              <p style="color: #333; margin: 8px 0;"><strong>Temporary Password:</strong> <code style="background: white; padding: 5px 10px; border-radius: 4px; font-family: monospace; font-weight: bold;">${tempPassword}</code></p>
+            <!-- Credential Box Layer using Canvas/Muted Contrast Rules -->
+            <div style="background-color: #F7F4F0; padding: 24px; border-radius: 4px; margin: 24px 0; border: 1px solid #DDD8D1;">
+              <h3 style="font-family: Georgia, serif; color: #6B3522; font-size: 16px; font-weight: bold; margin-top: 0; margin-bottom: 16px;">Your Access Credentials</h3>
+              <p style="font-size: 14px; margin: 8px 0; color: #261E1A;"><strong>Registered Email:</strong> ${user.email}</p>
+              <p style="font-size: 14px; margin: 8px 0; color: #261E1A;"><strong>Temporary Password:</strong> <code style="background-color: #F3EFE9; padding: 4px 8px; border: 1px solid #DDD8D1; border-radius: 2px; font-family: monospace; font-weight: bold; color: #6B3522;">${tempPassword}</code></p>
             </div>
 
-            <div style="margin: 30px 0;">
-              <a href="${loginUrl}" style="display: inline-block; background: #059669; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                Log In Now
+            <!-- Restrained Primary Button Call-to-action (Deep Clay) -->
+            <div style="margin: 32px 0; text-align: left;">
+              <a href="${loginUrl}" style="display: inline-block; background-color: #6B3522; color: #F7F4F0; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 14px; tracking-edge: 0.05em;">
+                Log In to Your Account
               </a>
             </div>
 
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              <strong>Next Steps:</strong>
+            <p style="color: #261E1A; font-size: 14px; font-weight: 600; margin-top: 32px; margin-bottom: 12px;">
+              Next Steps for Learning & Sourcing:
             </p>
-            <ol style="color: #666; font-size: 14px; line-height: 1.8;">
-              <li>Click the button above to log in</li>
-              <li>Use your email and temporary password</li>
-              <li>Change your password on first login</li>
-              <li>Start browsing ${roleText === "Teacher Reseller" ? "wholesale pricing" : "institutional pricing"}</li>
+            <ol style="color: #7D7570; font-size: 14px; line-height: 1.8; margin-top: 0; padding-left: 20px;">
+              <li>Click the link above to reach the storefront portal</li>
+              <li>Authenticate your login using your temporary credentials</li>
+              <li>Update and personalize your account security password immediately</li>
+              <li>Begin browsing available volumes with active ${pricingText} applied</li>
             </ol>
 
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              <strong>Need Help?</strong> Reply to this email or WhatsApp Abdul at 0551-234567
+            <p style="color: #7D7570; font-size: 13px; margin-top: 32px; line-height: 1.5;">
+              <strong>Need Assistance?</strong> Reply directly to this transmission or message our desk via WhatsApp at <strong>+233 20 213 1864</strong>.
             </p>
 
-            <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-              Baarak Allahu feek,<br/>
+            <div style="color: #7D7570; font-size: 13px; margin-top: 32px; border-top: 1px solid #DDD8D1; padding-top: 24px; line-height: 1.5;">
+              Baarak Allahu feekum,<br/><br/>
               <strong>Abdul</strong><br/>
-              Al-Hikmah Islamic Bookstore
-            </p>
+              <span style="font-size: 11px; text-transform: uppercase; tracking-wider: 0.1em; color: #7D7570;">Al-Hikmah Sourcing & Verification Desk</span>
+            </div>
           </div>
         </div>
       `,
@@ -117,7 +122,6 @@ export async function approveApplication(userId: string, verificationNotes: stri
 
 export async function rejectApplication(userId: string, reason: string) {
   try {
-    // Fetch user
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, name: true, role: true },
@@ -127,7 +131,6 @@ export async function rejectApplication(userId: string, reason: string) {
       return { success: false, error: "User not found" };
     }
 
-    // Update user: rejected
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -136,60 +139,64 @@ export async function rejectApplication(userId: string, reason: string) {
       },
     });
 
-    // Send rejection email
     const roleText = user.role === "MALAM" ? "Teacher Reseller" : "Institution";
 
+    // 🎨 Upgraded Email Template: Swapping out raw Red alerts for disciplined semantic error profiles
     await resend.emails.send({
-      from: "noreply@alhikmahbookstore.com",
+      from: "alhikmhbookstore93@gmail.com",
       to: user.email!,
-      subject: "Application Status Update - Al-Hikmah Bookstore",
+      subject: "Application Update — Al-Hikmah Islamic Bookstore",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8f8f8;">
-          <div style="background: white; padding: 30px; border-radius: 10px; border-left: 4px solid #dc2626;">
-            <h1 style="color: #dc2626; margin-top: 0;">Application Status</h1>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 16px; background-color: #F7F4F0; color: #261E1A;">
+          <div style="background-color: #F3EFE9; padding: 40px; border-radius: 4px; border: 1px solid #DDD8D1; border-top: 4px solid #9C2E26;">
             
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">
+            <p style="font-family: Georgia, serif; font-size: 20px; font-weight: bold; color: #261E1A; margin-top: 0; margin-bottom: 24px;">
+              Al-Hikmah Islamic Bookstore
+            </p>
+            
+            <p style="font-size: 15px; line-height: 1.6; margin-bottom: 16px;">
               As-salamu alaikum wa rahmatullahi wa barakatuh,
             </p>
 
-            <p style="color: #333; font-size: 16px; line-height: 1.6;">
-              Thank you for applying to become an Al-Hikmah <strong>${roleText}</strong>.
+            <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+              Thank you for your interest in registering for the Al-Hikmah <strong>${roleText}</strong> program.
             </p>
 
-            <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
-              <p style="color: #991b1b; margin: 0;">
-                <strong>Your application could not be verified at this time.</strong>
+            <!-- Muted, print-style error block avoiding toxic notification tones -->
+            <div style="background-color: #F7F4F0; padding: 24px; border-radius: 4px; margin: 24px 0; border: 1px solid #DDD8D1;">
+              <p style="color: #9C2E26; font-size: 14px; font-weight: bold; margin-top: 0; margin-bottom: 8px;">
+                Application Status Update
               </p>
-              <p style="color: #7f1d1d; margin: 10px 0 0 0; font-size: 14px;">
-                ${reason || "We were unable to verify the information provided."}
+              <p style="color: #261E1A; margin: 0; font-size: 14px; line-height: 1.6;">
+                ${reason || "We were unable to fully verify the structural credentials provided at this stage."}
               </p>
             </div>
 
-            <p style="color: #666; font-size: 14px; line-height: 1.8;">
-              <strong>What you can do:</strong>
+            <p style="color: #261E1A; font-size: 14px; font-weight: 600; margin-top: 32px; margin-bottom: 12px;">
+              Recommended Verification Steps:
             </p>
-            <ul style="color: #666; font-size: 14px; line-height: 1.8;">
-              <li>Review the documents you submitted</li>
-              <li>Ensure your madrasah letter is clear and on official letterhead</li>
-              <li>Contact Abdul to discuss: 0551-234567</li>
+            <ul style="color: #7D7570; font-size: 14px; line-height: 1.8; margin-top: 0; padding-left: 20px;">
+              <li>Verify that all submitted validation documentation is fully legible.</li>
+              <li>Ensure madrasah clearance letters utilize official, stamped institution letterheads.</li>
+              <li>Coordinate directly with our administrative desk to reconcile errors.</li>
             </ul>
 
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              We'd love to work with you! Feel free to reach out to discuss next steps.
+            <p style="color: #7D7570; font-size: 14px; margin-top: 32px; line-height: 1.6;">
+              We look forward to facilitating your curriculum access. Please do not hesitate to contact our verification desk to resolve individual submission data errors.
             </p>
 
-            <p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-              Wassalamu alaikum,<br/>
+            <div style="color: #7D7570; font-size: 13px; margin-top: 32px; border-top: 1px solid #DDD8D1; padding-top: 24px; line-height: 1.5;">
+              Wassalamu alaikum,<br/><br/>
               <strong>Abdul</strong><br/>
-              Al-Hikmah Islamic Bookstore<br/>
-              0551-234567
-            </p>
+              <span style="font-size: 11px; text-transform: uppercase; tracking-wider: 0.1em; color: #7D7570;">Al-Hikmah Sourcing & Verification Desk</span><br/>
+              <span style="color: #261E1A; font-weight: 500;">+233 20 213 1864</span>
+            </div>
           </div>
         </div>
       `,
     });
 
-    revalidatePath("/admin/verification");
+        revalidatePath("/admin/verification");
 
     return {
       success: true,
@@ -203,3 +210,4 @@ export async function rejectApplication(userId: string, reason: string) {
     };
   }
 }
+

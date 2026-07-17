@@ -1,128 +1,128 @@
+// app/components/navigation/Navbar.tsx
+import React from "react";
 import Link from "next/link";
 import { NavActions } from "./NavActions";
-import { prisma } from "../../../lib/prisma"; 
+import type { NavMenuData } from "@/services/homepage";
 
-// 🛡️ UPDATED INTERFACE: Ensuring the custom navbar accepts the Better-Auth session signature passed down from the server layout
 interface NavbarProps {
+  // Synchronized seamlessly to map Better Auth data objects cleanly during pnpm build
   session: {
     user: {
       id: string;
       email: string;
       name: string | null;
-      role: "CUSTOMER" | "ADMIN";
+      role?: string | null; // Safe parameter mapping that native database vectors output
     };
   } | null;
+  categories: NavMenuData["categories"];
+  featuredAuthors: NavMenuData["featuredAuthors"];
 }
 
-export async function Navbar({ session }: NavbarProps) {
-  // 1. Fetch main categories for the taxonomy dropdown
-  const categories = await prisma.category.findMany({
-    where: { parentId: null }, // Only top-level categories first
-    take: 9,
-    orderBy: { name: "asc" },
-  });
-
-  // 2. Fetch featured authors chronologically by Islamic Hijri death year
-  const featuredAuthors = await prisma.author.findMany({
-    take: 5,
-    orderBy: { diedAH: "asc" }, 
-  });
-
+export function Navbar({ session, categories, featuredAuthors }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
-      {/* Desktop & Tablet Navigation */}
+    <div className="w-full bg-background font-sans text-label font-medium text-foreground select-none">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
-          
-          {/* Logo */}
-          <Link href="/" className="flex flex-shrink-0 items-center">
-            <span className="text-xl font-bold tracking-tight text-emerald-900 font-serif">
+        <div className="flex h-20 items-center justify-between gap-6">
+
+          <Link href="/" className="flex flex-shrink-0 items-center group">
+            <span className="text-title font-bold tracking-tight text-foreground font-serif group-hover:text-primary-hover transition-colors duration-fast ease-standard">
               Al-Hikmah
             </span>
           </Link>
 
-          {/* Desktop Central Menu Links */}
-          <nav className="hidden lg:flex items-center gap-x-6 text-sm font-medium text-slate-700">
-           {/* <Link href="/" className="hover:text-emerald-700 transition">Home</Link>*/}
-            
-            {/* Books Dropdown Menu Trigger */}
+          <nav className="hidden lg:flex items-center gap-x-6">
+
+            {/* Link Block 1: General Inventory Directories */}
             <div className="relative group py-2">
-              <button className="flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
-                Books <span className="text-[10px]">▼</span>
+              <button className="flex items-center gap-1 hover:text-primary-hover transition-colors duration-fast ease-standard cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">
+                <span>Books</span>
+                <span className="text-[9px] text-muted-foreground/80 opacity-60 group-hover:text-primary-hover transition-colors">▼</span>
               </button>
-              <div className="absolute top-full left-0 hidden group-hover:block w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-2 mt-1 z-50">
-                <Link href="/books" className="block px-4 py-2 hover:bg-slate-50 text-slate-800">All Books</Link>
-                <Link href="/books?filter=new" className="block px-4 py-2 hover:bg-slate-50 text-slate-800">New Arrivals</Link>
-                <Link href="/books?filter=best" className="block px-4 py-2 hover:bg-slate-50 text-slate-800">Best Sellers</Link>
+              {/* System Fit: Fixed legacy rounded-md to print-inspired rounded-sm tokens */}
+              <div className="absolute top-full left-0 hidden group-hover:block w-48 bg-card border border-border rounded-sm shadow-dialog py-2 mt-1 z-50">
+                <Link href="/books" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors duration-fast">All Books</Link>
+                <Link href="/books?filter=new" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors duration-fast">New Arrivals</Link>
+                <Link href="/books?filter=best" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors duration-fast">Best Sellers</Link>
               </div>
             </div>
 
-            {/* Dynamic Categories Dropdown Menu */}
+            {/* Link Block 2: Islamic Sciences & Disciplines Index */}
             <div className="relative group py-2">
-              <button className="flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
-                Categories <span className="text-[10px]">▼</span>
+              <button className="flex items-center gap-1 hover:text-primary-hover transition-colors duration-fast ease-standard cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">
+                <span>Categories</span>
+                <span className="text-[9px] text-muted-foreground/80 opacity-60 group-hover:text-primary-hover transition-colors">▼</span>
               </button>
-              <div className="absolute top-full left-0 hidden group-hover:block w-56 bg-white border border-slate-200 rounded-lg shadow-lg py-2 mt-1 z-50 max-h-[400px] overflow-y-auto">
+              <div className="absolute top-full left-0 hidden group-hover:block w-56 bg-card border border-border rounded-sm shadow-dialog py-2 mt-1 z-50 max-h-[350px] overflow-y-auto scrollbar-none">
                 {categories.map((cat) => (
-                  <Link key={cat.id} href={`/categories/${cat.slug}`} className="block px-4 py-2 hover:bg-slate-50 text-slate-800">
+                  <Link key={cat.id} href={`/categories/${cat.slug}`} className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors duration-fast">
                     {cat.name}
                   </Link>
                 ))}
-                <div className="border-t border-slate-100 my-1"></div>
-                <Link href="/books" className="block px-4 py-2 text-emerald-700 hover:bg-emerald-50 font-semibold">
+                <div className="border-t border-border/40 my-1" />
+                <Link href="/books" className="block px-4 py-2 text-primary hover:bg-surface-hover font-semibold transition-colors duration-fast">
                   Browse All →
                 </Link>
               </div>
             </div>
 
-            {/* Dynamic Authors Dropdown Menu */}
+            {/* Link Block 3: Biography Catalog Links */}
             <div className="relative group py-2">
-              <button className="flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
-                Authors <span className="text-[10px]">▼</span>
+              <button className="flex items-center gap-1 hover:text-primary-hover transition-colors duration-fast ease-standard cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">
+                <span>Authors</span>
+                <span className="text-[9px] text-muted-foreground/80 opacity-60 group-hover:text-primary-hover transition-colors">▼</span>
               </button>
-              <div className="absolute top-full left-0 hidden group-hover:block w-56 bg-white border border-slate-200 rounded-lg shadow-lg py-2 mt-1 z-50">
-                <Link href="/authors" className="block px-4 py-2 font-semibold text-slate-500 text-xs uppercase tracking-wider">Browse Authors</Link>
+              <div className="absolute top-full left-0 hidden group-hover:block w-60 bg-card border border-border rounded-sm shadow-dialog py-2 mt-1 z-50">
+                <Link
+                  href="/authors"
+                  className="block px-4 py-1.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-b border-border/30 mb-1 hover:text-primary-hover transition-colors"
+                >
+                  Browse Authors
+                </Link>
                 {featuredAuthors.map((author) => (
-                  <Link key={author.id} href={`/authors/${author.id}`} className="block px-4 py-2 hover:bg-slate-50 text-slate-800">
-                    {author.name} {author.diedAH ? `(d. ${author.diedAH} AH)` : ""}
+                  <Link key={author.id} href={`/authors/${author.id}`} className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors duration-fast text-xs font-medium">
+                    {author.name}{author.diedAH ? ` (d. ${author.diedAH} AH)` : ""}
                   </Link>
                 ))}
-                <div className="border-t border-slate-100 my-1"></div>
-                <Link href="/authors" className="block px-4 py-2 text-emerald-700 hover:bg-emerald-50 font-semibold">
+                <div className="border-t border-border/40 my-1" />
+                <Link href="/authors" className="block px-4 py-2 text-primary hover:bg-surface-hover font-semibold transition-colors duration-fast">
                   All Scholars →
                 </Link>
               </div>
             </div>
 
-            {/* Knowledge Level Schema Dropdown Menu */}
+            {/* Link Block 4: Curriculum Difficulty Tracks */}
             <div className="relative group py-2">
-              <button className="flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
-                Study Level <span className="text-[10px]">▼</span>
+              <button className="flex items-center gap-1 hover:text-primary-hover transition-colors duration-fast ease-standard cursor-pointer focus-visible:outline-2 focus-visible:outline-ring">
+                <span>Study Level</span>
+                <span className="text-[9px] text-muted-foreground/80 opacity-60 group-hover:text-primary-hover transition-colors">▼</span>
               </button>
-              <div className="absolute top-full left-0 hidden group-hover:block w-56 bg-white border border-slate-200 rounded-lg shadow-lg py-2 mt-1 z-50">
-                <Link href="/books?level=MUBTADI" className="block px-4 py-2 hover:bg-slate-50 text-slate-800 flex flex-col">
-                  <span className="font-medium">Beginner</span>
-                  <span className="text-xs text-slate-500 font-mono">Mubtadi (مبتدئ)</span>
+              <div className="absolute top-full left-0 hidden group-hover:block w-56 bg-card border border-border rounded-sm shadow-dialog py-2 mt-1 z-50">
+                <Link href="/books?level=MUBTADI" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors flex flex-col space-y-0.5">
+                  <span className="font-semibold text-xs uppercase tracking-wide">Beginner</span>
+                  <span className="text-[11px] text-muted-foreground font-serif leading-none">Mubtadi (مبتدئ)</span>
                 </Link>
-                <Link href="/books?level=MUTAWASSIT" className="block px-4 py-2 hover:bg-slate-50 text-slate-800 flex flex-col">
-                  <span className="font-medium">Intermediate</span>
-                  <span className="text-xs text-slate-500 font-mono">Mutawassit (متوسط)</span>
+                <Link href="/books?level=MUTAWASSIT" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors flex flex-col space-y-0.5">
+                  <span className="font-semibold text-xs uppercase tracking-wide">Intermediate</span>
+                  <span className="text-[11px] text-muted-foreground font-serif leading-none">Mutawassit (متوسط)</span>
                 </Link>
-                <Link href="/books?level=MUTAQADDIM" className="block px-4 py-2 hover:bg-slate-50 text-slate-800 flex flex-col">
-                  <span className="font-medium">Advanced</span>
-                  <span className="text-xs text-slate-500 font-mono">Mutaqaddim (متقدم)</span>
+                <Link href="/books?level=MUTAQADDIM" className="block px-4 py-2 hover:bg-surface-hover text-foreground transition-colors flex flex-col space-y-0.5">
+                  <span className="font-semibold text-xs uppercase tracking-wide">Advanced</span>
+                  <span className="text-[11px] text-muted-foreground font-serif leading-none">Mutaqaddim (متقدم)</span>
                 </Link>
               </div>
             </div>
 
-            <Link href="/about" className="hover:text-emerald-700 transition">About</Link>
+            <Link href="/about" className="hover:text-primary-hover transition-colors duration-fast ease-standard">About</Link>
           </nav>
 
-          {/* Search Inputs & Dynamic Actions Component Layer */}
-          <NavActions categories={categories.map(c => ({ id: c.id, name: c.name, slug: c.slug, parentId: c.parentId }))} session={session} />
+          {/* User Context Interface Tray */}
+          <NavActions
+            categories={categories}
+            session={session}
+          />
 
         </div>
       </div>
-    </header>
+    </div>
   );
 }

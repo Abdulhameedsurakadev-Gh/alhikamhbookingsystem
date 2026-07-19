@@ -2,6 +2,8 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
 import InventoryClientView from "./InventoryClientView_dropshipping";
+export const dynamic = "force-dynamic";
+
 
 export default async function ManageInventoryPage() {
   // Fetch complete dataset array including related category and author objects

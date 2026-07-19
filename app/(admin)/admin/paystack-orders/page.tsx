@@ -2,6 +2,8 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
 import OrdersClientView from "./OrdersClientView";
+export const dynamic = "force-dynamic";
+
 
 export default async function PaystackOrdersPage() {
   const orders = await prisma.order.findMany({

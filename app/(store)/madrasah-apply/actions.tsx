@@ -21,7 +21,7 @@ export async function submitMadrasahApplication(formData: FormData) {
     const location = formData.get("location") as string;
     const studentCount = parseInt(formData.get("studentCount") as string, 10);
     const letterFile = formData.get("letter") as File;
-    const registrationFile = formData.get("registration") as File | null;
+    const registrationFile = formData.get("idProof") as File | null; // Match frontend name from form context
 
     // Validate required fields
     if (!organizationName || !principalName || !phone || !email || !location || !studentCount) {
@@ -31,7 +31,7 @@ export async function submitMadrasahApplication(formData: FormData) {
       };
     }
 
-    if (!letterFile) {
+    if (!letterFile || letterFile.size === 0) {
       return {
         success: false,
         error: "Please upload Madrasah Letter",
@@ -47,7 +47,10 @@ export async function submitMadrasahApplication(formData: FormData) {
       };
     }
 
-    if (registrationFile && !allowedTypes.includes(registrationFile.type)) {
+    // ✅ FIXED: Guard condition to check if an optional file actually contains data
+    const hasRegistrationUploaded = registrationFile && registrationFile.size > 0;
+
+    if (hasRegistrationUploaded && !allowedTypes.includes(registrationFile.type)) {
       return {
         success: false,
         error: "Only JPG, PNG, or PDF files allowed for registration",
@@ -63,16 +66,18 @@ export async function submitMadrasahApplication(formData: FormData) {
       };
     }
 
-    if (registrationFile && registrationFile.size > maxSize) {
+    if (hasRegistrationUploaded && registrationFile.size > maxSize) {
       return {
         success: false,
         error: "Registration file must be smaller than 5MB",
       };
     }
 
-    // Upload Madrasah Letter to Supabase Storage
-    const letterFileName = `madrasah-applications/letters/${Date.now()}-${letterFile.name}`;
+    // ✅ FIXED: Sanitize file names to remove spaces and bad characters before pushing to storage path
+    const cleanLetterName = letterFile.name.replace(/[^a-zA-Z0-9.]/g, "_");
+    const letterFileName = `madrasah-applications/letters/${Date.now()}-${cleanLetterName}`;
     const letterBuffer = await letterFile.arrayBuffer();
+    
     const { data: letterData, error: letterError } = await supabase.storage
       .from("uploads")
       .upload(letterFileName, letterBuffer, {
@@ -90,9 +95,12 @@ export async function submitMadrasahApplication(formData: FormData) {
 
     // Upload School Registration (optional)
     let registrationUrl: string | null = null;
-    if (registrationFile) {
-      const registrationFileName = `madrasah-applications/registration/${Date.now()}-${registrationFile.name}`;
+    if (hasRegistrationUploaded) {
+      // ✅ FIXED: Sanitize registration file name
+      const cleanRegName = registrationFile.name.replace(/[^a-zA-Z0-9.]/g, "_");
+      const registrationFileName = `madrasah-applications/registration/${Date.now()}-${cleanRegName}`;
       const registrationBuffer = await registrationFile.arrayBuffer();
+      
       const { data: regData, error: regError } = await supabase.storage
         .from("uploads")
         .upload(registrationFileName, registrationBuffer, {
@@ -127,7 +135,6 @@ export async function submitMadrasahApplication(formData: FormData) {
 
     // Create or update user with MADRASAH role and verification pending
     if (user) {
-      // Update existing user
       user = await prisma.user.update({
         where: { email },
         data: {
@@ -140,11 +147,10 @@ export async function submitMadrasahApplication(formData: FormData) {
           studentCount,
           location,
           letterUrl,
-          idProofUrl: registrationUrl, // Reuse idProofUrl for registration certificate
+          idProofUrl: registrationUrl,
         },
       });
     } else {
-      // Create new user
       user = await prisma.user.create({
         data: {
           email,

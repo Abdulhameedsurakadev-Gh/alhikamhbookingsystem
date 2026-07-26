@@ -385,5 +385,4 @@ export async function rejectApplication(userId: string, reason: string) {
       error: error.message || "Failed to reject application",
     };
   }
-}
 

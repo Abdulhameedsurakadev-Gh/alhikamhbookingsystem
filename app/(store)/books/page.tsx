@@ -1,428 +1,175 @@
-// app/(store)/books/page.tsx
-import Link from "next/link";
-import { prisma } from "../../../lib/prisma";
-import { FilterSidebar } from "./FilterSidebar";
-import { KnowledgeLevel, TextType, CoverType, VolumeType } from "@prisma/client";
-import { Search, X, BookOpen, Star, Sparkles, AlertCircle } from "lucide-react";
-import { SortDropdown } from "./SortDropdown";
-import { BookRequestCTA } from "../../components/shared/BookRequestCTA";
+@import "tailwindcss";
+@import "tw-animate-css";
 
-// ✅ v2.0 B2B AUTHENTICATED TIER PRICE INTEGRATIONS
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { PriceDisplay } from "./PriceDisplay";
+:root {
+  /* ==========================================================================
+     1. AL-HIKMAH DESIGN TOKENS (Raw Channel Values)
+     ========================================================================== */
 
-interface SearchParams {
-  search?: string;
-  category?: string;
-  level?: string;
-  textType?: string;
-  coverType?: string;
-  volumeType?: string;
-  sort?: string;
-  page?: string;
+  /* --- Typography Family Pairs --- */
+  --ah-font-serif: var(--font-playfair), serif;
+  --ah-font-sans: var(--font-inter), sans-serif;
+
+  /* --- Fixed Modular Typography Scale --- */
+  --ah-size-display: 2.5rem;
+  --ah-size-heading: 1.75rem;
+  --ah-size-title: 1.25rem;
+  --ah-size-body: 1rem;
+  --ah-size-label: 0.875rem;
+
+  --ah-weight-regular: 400;
+  --ah-weight-medium: 500;
+  --ah-weight-semibold: 600;
+  --ah-weight-bold: 700;
+
+  /* --- Strict 8-Point Spacing Architecture --- */
+  --ah-space-1: 0.25rem;
+  --ah-space-2: 0.5rem;
+  --ah-space-4: 1rem;
+  --ah-space-6: 1.5rem;
+  --ah-space-8: 2rem;
+  --ah-space-12: 3rem;
+  --ah-space-16: 4rem;
+
+  /* --- Print-Inspired Structural Radius --- */
+  --ah-radius-sm: 4px;
+  --ah-radius-md: 8px;
+  --ah-radius-lg: 12px;
+  --ah-radius-xl: 16px;
+
+  /* --- Shadow Profiles --- */
+  --ah-shadow-subtle: 0 1px 3px 0 rgba(38, 30, 26, 0.05), 0 1px 2px -1px rgba(38, 30, 26, 0.05);
+  --ah-shadow-dialog: 0 10px 15px -3px rgba(38, 30, 26, 0.08), 0 4px 6px -4px rgba(38, 30, 26, 0.08);
+
+  /* --- Micro-Interaction Motion --- */
+  --ah-duration-fast: 150ms;
+  --ah-duration-normal: 250ms;
+  --ah-duration-slow: 350ms;
+  --ah-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* --- HSL Color Raw Channels --- */
+  --ah-color-canvas: 36 33% 97%;
+  --ah-color-surface: 36 30% 95%;
+  --ah-color-ink: 24 25% 12%;
+  --ah-color-ink-muted: 24 10% 45%;
+  --ah-color-clay-darkened: 15 52% 28%;
+  --ah-color-sand: 38 35% 82%;
+  --ah-color-border: 30 12% 86%;
+
+  /* --- Transaction Status Channels --- */
+  --ah-color-error: 4 55% 40%;
+  --ah-color-success: 142 35% 32%;
+  --ah-color-warning: 38 50% 45%;
 }
 
-export default async function BooksPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const params = await searchParams;
-  const search = params.search || "";
-  const categorySlug = params.category || "";
-  const level = params.level as KnowledgeLevel | undefined;
-  const textType = params.textType as TextType | undefined;
-  const coverType = params.coverType as CoverType | undefined;
-  const volumeType = params.volumeType as VolumeType | undefined;
-  
-  // Sorting Configuration
-  const sort = params.sort || "newest";
+@theme inline {
+  /* ==========================================================================
+     2. TAILWIND UTILITY MAPPING
+     ========================================================================== */
+  --font-serif: var(--ah-font-serif);
+  --font-sans: var(--ah-font-sans);
 
-  // Pagination Configuration 
-  const BOOKS_PER_PAGE = 12; // Standard view limit per load batch
-  const currentPage = Math.max(1, parseInt(params.page || "1", 10));
+  --text-display: var(--ah-size-display);
+  --text-heading: var(--ah-size-heading);
+  --text-title: var(--ah-size-title);
+  --text-body: var(--ah-size-body);
+  --text-label: var(--ah-size-label);
 
-  // ✅ SECURE ENGINE SEED: Fetch complete user session context concurrently with database aggregations
-  const [session, categories] = await Promise.all([
-    auth.api.getSession({ headers: await headers() }),
-    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } })
-  ]);
+  --font-weight-regular: var(--ah-weight-regular);
+  --font-weight-medium: var(--ah-weight-medium);
+  --font-weight-semibold: var(--ah-weight-semibold);
+  --font-weight-bold: var(--ah-weight-bold);
 
-  const userRole = session?.user?.role || null;
-  const isVerified = (session?.user as any)?.verificationStatus === "APPROVED";
+  --spacing-1: var(--ah-space-1);
+  --spacing-2: var(--ah-space-2);
+  --spacing-4: var(--ah-space-4);
+  --spacing-6: var(--ah-space-6);
+  --spacing-8: var(--ah-space-8);
+  --spacing-12: var(--ah-space-12);
+  --spacing-16: var(--ah-space-16);
 
-  // 1. Build Unified Prisma Dynamic Conditions Object
-  const whereClause: any = {};
-  if (search) {
-    whereClause.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { author: { name: { contains: search, mode: "insensitive" } } },
-      { isbn: { contains: search, mode: "insensitive" } },
-      { publisher: { contains: search, mode: "insensitive" } },
-    ];
+  --radius-sm: var(--ah-radius-sm);
+  --radius-md: var(--ah-radius-md);
+  --radius-lg: var(--ah-radius-lg);
+  --radius-xl: var(--ah-radius-xl);
+
+  --shadow-subtle: var(--ah-shadow-subtle);
+  --shadow-dialog: var(--ah-shadow-dialog);
+
+  --duration-fast: var(--ah-duration-fast);
+  --duration-normal: var(--ah-duration-normal);
+  --duration-slow: var(--ah-duration-slow);
+  --ease-standard: var(--ah-ease-standard);
+
+  /* --- Core Semantic Colors ---
+     No <alpha-value> placeholder — that was a Tailwind v3 JS-config-only
+     trick. Tailwind v4 supports opacity modifiers (bg-primary/50) natively
+     via color-mix() for any valid color value, so a plain hsl() is enough. */
+  --color-background: hsl(var(--ah-color-canvas));
+  --color-foreground: hsl(var(--ah-color-ink));
+
+  --color-card: hsl(var(--ah-color-surface));
+  --color-card-foreground: hsl(var(--ah-color-ink));
+
+  --color-popover: hsl(var(--ah-color-surface));
+  --color-popover-foreground: hsl(var(--ah-color-ink));
+
+  --color-primary: hsl(var(--ah-color-clay-darkened));
+  --color-primary-foreground: hsl(var(--ah-color-canvas));
+
+  --color-secondary: hsl(var(--ah-color-sand));
+  --color-secondary-foreground: hsl(var(--ah-color-ink));
+
+  --color-muted: hsl(var(--ah-color-surface));
+  --color-muted-foreground: hsl(var(--ah-color-ink-muted));
+
+  --color-accent: hsl(var(--ah-color-sand));
+  --color-accent-foreground: hsl(var(--ah-color-ink));
+
+  --color-destructive: hsl(var(--ah-color-error));
+  --color-destructive-foreground: hsl(var(--ah-color-canvas));
+
+  --color-border: hsl(var(--ah-color-border));
+  --color-input: hsl(var(--ah-color-border));
+  --color-ring: hsl(var(--ah-color-clay-darkened));
+
+  --color-success: hsl(var(--ah-color-success));
+  --color-success-foreground: hsl(var(--ah-color-canvas));
+  --color-warning: hsl(var(--ah-color-warning));
+  --color-warning-foreground: hsl(var(--ah-color-canvas));
+
+  /* --- Interaction Tokens ---
+     Not invented — these codify the exact fractions already repeated by hand
+     across SubjectChips, Hero, and TrustSection (hover:bg-secondary/20,
+     hover:bg-primary/90, hover:border-primary/40, focus:ring-primary/10).
+     Naming them stops future components from guessing a slightly different
+     fraction each time. */
+  --color-primary-hover: hsl(var(--ah-color-clay-darkened) / 90%);
+  --color-surface-hover: color-mix(in oklab, hsl(var(--ah-color-canvas)), hsl(var(--ah-color-sand)) 20%);
+  --color-border-hover: hsl(var(--ah-color-clay-darkened) / 40%);
+  --color-focus-ring: hsl(var(--ah-color-clay-darkened) / 10%);
+  --color-selection: hsl(var(--ah-color-clay-darkened) / 20%);
+  --color-disabled: hsl(var(--ah-color-ink-muted) / 40%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
   }
-  if (categorySlug) whereClause.category = { slug: categorySlug };
-  if (level) whereClause.knowledgeLevel = level;
-  if (textType) whereClause.textType = textType;
-  if (coverType) whereClause.coverType = coverType;
-  if (volumeType) whereClause.volumeType = volumeType;
-
-  // 2. Build Unified Prisma Dynamic Sorting Array Block
-  let orderByClause: any = { createdAt: "desc" }; // default fallback
-  if (sort === "price-asc") orderByClause = { price: "asc" };
-  if (sort === "price-desc") orderByClause = { price: "desc" };
-  if (sort === "title-az") orderByClause = { title: "asc" };
-  if (sort === "title-za") orderByClause = { title: "desc" };
-
-  // 3. Parallel Query Runner for high processing velocity
-  const [allBooks, totalFilteredCount] = await Promise.all([
-    prisma.book.findMany({
-      where: whereClause,
-      include: { author: true, category: true, explanations: true },
-      orderBy: orderByClause,
-      take: currentPage * BOOKS_PER_PAGE, // Pulls cumulative counts to support "Load More" appends smoothly
-    }),
-    prisma.book.count({ where: whereClause }), // Filtered criteria count
-  ]);
-
-  // Fetch contextual discovery feeds only when no active filter constraints are applied
-  const hasActiveFilters = search || categorySlug || level || textType || coverType || volumeType;
-  
-  const newArrivals = !hasActiveFilters
-    ? await prisma.book.findMany({ take: 5, orderBy: { createdAt: "desc" }, include: { author: true, category: true } })
-    : [];
-
-  const beginnerFriendly = !hasActiveFilters
-    ? await prisma.book.findMany({ where: { knowledgeLevel: "MUBTADI" }, take: 5, include: { author: true, category: true } })
-    : [];
-
-  // Helper URL modifier path assembly logic
-  const getRemoveFilterUrl = (keyToDelete: string) => {
-    const activeKeys = { ...params };
-    delete (activeKeys as any)[keyToDelete];
-    const searchParams = new URLSearchParams();
-    Object.entries(activeKeys).forEach(([key, val]) => {
-      if (val) searchParams.set(key, val);
-    });
-    return `/books?${searchParams.toString()}`;
-  };
-
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-16">
-      
-      {/* Search Header Banner */}
-      <div className="sticky top-0 z-30 bg-slate-50 py-2.5 lg:static lg:bg-transparent lg:py-0">
-        <form action="/books" method="GET" className="relative w-full shadow-sm lg:shadow-none">
-          <input
-            type="text"
-            name="search"
-            defaultValue={search}
-            placeholder="Search book titles, scholars, keywords, ISBN barcodes..."
-            className="w-full bg-white text-slate-900 pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-700 text-sm transition shadow-sm"
-          />
-          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-          {sort && <input type="hidden" name="sort" value={sort} />}
-        </form>
-      </div>
-
-      {/* Quick Topic Chips */}
-      <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0">
-        <div className="flex gap-2 whitespace-nowrap py-1">
-          <Link
-            href="/books"
-            className={`inline-block px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-              !categorySlug ? "bg-emerald-800 text-amber-100" : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-600"
-            }`}
-          >
-            All Subjects
-          </Link>
-          {categories.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/books?category=${cat.slug}${sort ? `&sort=${sort}` : ""}`}
-              className={`inline-block px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                categorySlug === cat.slug ? "bg-emerald-800 text-amber-100" : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-600"
-              }`}
-            >
-              {cat.name}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Pre-Catalog Discovery Sections */}
-      {!hasActiveFilters && (
-        <div className="space-y-8">
-          <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950 text-white rounded-2xl p-5 shadow-md border border-emerald-800">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-amber-300" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-amber-200">Start Learning By Study Level</h2>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <Link href={`/books?level=MUBTADI${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Beginner <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mubtadi</span>
-              </Link>
-              <Link href={`/books?level=MUTAWASSIT${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Intermediate <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mutawassit</span>
-              </Link>
-              <Link href={`/books?level=MUTAQADDIM${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Advanced <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mutaqaddim</span>
-              </Link>
-            </div>
-          </section>
-
-                    {/* New Arrivals list slider */}
-          {newArrivals.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-1.5 px-1">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <h3 className="font-serif font-bold text-lg text-slate-900">New Arrivals</h3>
-              </div>
-              <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
-                {newArrivals.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
-                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                      {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
-                      )}
-                      {!book.available && (
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                          <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
-                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
-                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      
-                      {/* ✅ UNIFIED PRICE MATRIX HOOK FOR ARRIVALS BANNER */}
-                      <div className="pt-1">
-                        <PriceDisplay
-                          retailPrice={Number(book.price)}
-                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
-                          userRole={userRole}
-                          isVerified={isVerified}
-                          showTiered={false}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Beginner Friendly list slider */}
-          {beginnerFriendly.length > 0 && (
-            <section className="space-y-3">
-              <div className="flex items-center gap-1.5 px-1">
-                <Star className="h-4 w-4 text-amber-500" />
-                <h3 className="font-serif font-bold text-lg text-slate-900">Beginner Friendly Mutoon</h3>
-              </div>
-              <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
-                {beginnerFriendly.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
-                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                      {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
-                      )}
-                      {!book.available && (
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                          <span className="text-white text-[9px] font-bold bg-black/50 px-1.5 py-0.5 rounded">Out of Stock</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
-                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
-                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      
-                      {/* ✅ UNIFIED PRICE MATRIX HOOK FOR BEGINNER FEEDS */}
-                      <div className="pt-1">
-                        <PriceDisplay
-                          retailPrice={Number(book.price)}
-                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
-                          userRole={userRole}
-                          isVerified={isVerified}
-                          showTiered={false}
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
-
-      {/* Active Filters Tag Close Chips Panel */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 px-1 pt-2">
-          <span className="font-semibold mr-1">Active Criteria:</span>
-          {search && (
-            <Link href={getRemoveFilterUrl("search")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              &quot;{search}&quot; <X className="h-3 w-3" />
-            </Link>
-          )}
-          {categorySlug && (
-            <Link href={getRemoveFilterUrl("category")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Subject: {categorySlug} <X className="h-3 w-3" />
-            </Link>
-          )}
-          {level && (
-            <Link href={getRemoveFilterUrl("level")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Level: {level} <X className="h-3 w-3" />
-            </Link>
-          )}
-          {textType && (
-            <Link href={getRemoveFilterUrl("textType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Type: {textType} <X className="h-3 w-3" />
-            </Link>
-          )}
-          {volumeType && (
-            <Link href={getRemoveFilterUrl("volumeType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Volume: {volumeType} <X className="h-3 w-3" />
-            </Link>
-          )}
-          {coverType && (
-            <Link href={getRemoveFilterUrl("coverType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Binding: {coverType} <X className="h-3 w-3" />
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* Main Split Grid View System */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left Floating Desktop Filtering Column Sidebar */}
-        <aside className="hidden lg:block lg:col-span-1 sticky top-6">
-          <FilterSidebar activeFilters={params} categories={categories} />
-        </aside>
-
-        {/* Dynamic Display Catalog Content Output Stream */}
-        <main className="lg:col-span-3 space-y-4">
-          
-          {/* List Metadata Header Info Drawer */}
-          <div className="flex items-center justify-between gap-4 bg-slate-50 border border-slate-200/60 p-4 rounded-xl shadow-sm">
-            <div className="text-xs font-semibold text-slate-600">
-              Found <span className="text-slate-900 font-bold">{totalFilteredCount}</span> authentic volumes {hasActiveFilters && "matching parameters"}
-            </div>
-            
-            {/* Sorting Interactive Control */}
-            <SortDropdown currentSort={sort} />
-          </div>
-
-          {allBooks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center mx-1">
-              <p className="text-sm text-slate-500 font-medium">No books match your specific filters.</p>
-              <Link href="/books" className="text-xs text-emerald-700 font-semibold underline mt-2 inline-block">
-                Reset All Search Filters
-              </Link>
-            </div>
-          ) : (
-            <div>
-              {/* Responsive Grid System: Row stacks on mobile, clean triple columns on large viewports */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {allBooks.map((book) => (
-                  <div key={book.id} className={`flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative ${!book.available ? "opacity-60" : ""}`}>
-                    
-                                  {/* Imagery Canvas Node */}
-                    <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                      {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-300" />
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
-                      )}
-                      
-                      {/* Out of Stock Status Layer */}
-                      {!book.available && (
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <AlertCircle className="h-5 w-5 text-white" />
-                            <span className="text-white text-[9px] font-bold bg-black/60 px-2 py-1 rounded-md">Out of Stock</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Text Classification Tag Overlay */}
-                      <span className="absolute top-1.5 right-1.5 bg-emerald-800 text-amber-100 font-mono text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shadow z-10">
-                        {book.textType}
-                      </span>
-                    </div>
-
-                    {/* Operational Information Description Text Blocks */}
-                    <div className="flex-1 flex flex-col justify-between lg:justify-start lg:space-y-1">
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">
-                          {book.category.name} • {book.knowledgeLevel}
-                        </span>
-                        <h4 className="font-serif font-bold text-sm lg:text-base text-slate-900 group-hover:text-emerald-800 transition line-clamp-2 mt-0.5">
-                          {book.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 italic mt-0.5 truncate">
-                          By {book.author.name} {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
-                        </p>
-                      </div>
-
-                      {/* ✅ AUTOMATED v2.0 B2B TIERS AND SAVE BADGE MANAGER SWITCH CONTAINER */}
-                      <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-slate-100 gap-2">
-                        <PriceDisplay
-                          retailPrice={Number(book.price)}
-                          supplierCost={book.supplierCost ? Number(book.supplierCost) : null}
-                          userRole={userRole}
-                          isVerified={isVerified}
-                          showTiered={true}
-                          size="sm"
-                        />
-                        <Link
-                          href={`/books/${book.id}`}
-                          className={`font-semibold px-3 py-1.5 rounded-md text-xs transition h-fit ${
-                            book.available
-                              ? "bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700"
-                              : "bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none"
-                          }`}
-                        >
-                          {book.available ? "View Book" : "Out"}
-                        </Link>
-                      </div>
-                    </div>
-
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* "Load More" Append Control Element */}
-          {allBooks.length < totalFilteredCount && (
-            <div className="flex justify-center pt-6">
-              <Link
-                href={`/books?${(() => {
-                  const nextParams = new URLSearchParams();
-                  Object.entries(params).forEach(([key, val]) => {
-                    if (val && key !== "page") nextParams.set(key, val);
-                  });
-                  nextParams.set("page", (currentPage + 1).toString());
-                  return nextParams.toString();
-                })()}`}
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs px-6 py-3 shadow transition cursor-pointer"
-              >
-                Load More Books
-              </Link>
-            </div>
-          )}
-
-          {/* Requisition Form Footer Segments */}
-          <BookRequestCTA />
-        </main>
-      </div>
-    </div>
-  );
-}
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: var(--font-weight-regular);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    color: var(--color-foreground);
+  }
+  ::selection {
+    background-color: var(--color-selection);
+    color: var(--color-foreground);
+  }
+    }

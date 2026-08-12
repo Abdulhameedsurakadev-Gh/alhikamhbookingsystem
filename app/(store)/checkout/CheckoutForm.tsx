@@ -1,47 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2, ShieldAlert } from "lucide-react";
-
-interface ShippingZone {
-  id: string;
-  name: string;
-  fee: number;
-  locations: string[];
-}
-
-const SHIPPING_ZONES: ShippingZone[] = [
-  {
-    id: "kasoa-pickup",
-    name: "Kasoa Pickup (Free)",
-    fee: 0,
-    locations: ["Blue Top", "Lawyer", "Transformer", "American Junction", "Kakraba Junction", "Tuba First Light", "Kasoa 2nd", "Kasoa Zongo(Near Sabilul al-Falah School)", "Kasoa Newtown", "Walantu Junction"],
-  },
-  {
-    id: "kasoa-communities",
-    name: "Kasoa Communities (GH₵6)",
-    fee: 6,
-    locations: ["Peacetown", "Tuba Roundabout(1st & 2nd)", "Amanfro", "Nyanyano", "Galilea", "Adade"],
-  },
-  {
-    id: "winneba-axis",
-    name: "Winneba Road Axis (GH₵12)",
-    fee: 12,
-    locations: ["Dominasi", "Akoti", "Breku", "Fetteh Kakraba", "Liberia Camp"],
-  },
-  {
-    id: "accra-highway",
-    name: "Accra Highway Axis (GH₵18)",
-    fee: 18,
-    locations: ["West Hills", "Weija", "Tetegu", "Mallam", "Dansoman", "Circle", "Tudu", "Barrier", "Kaneshie"],
-  },
-  {
-    id: "greater-accra-extended",
-    name: "Madina / Lapaz / Nsawam / Amasaman (GH₵30)",
-    fee: 30,
-    locations: ["Madina", "Lapaz", "Nsawam", "Amasaman"],
-  },
-];
+import { Loader2, ShieldAlert, AlertTriangle } from "lucide-react";
+import { SHIPPING_ZONES, type ShippingZone } from "../../../lib/shipping-zones";
 
 interface CartItem {
   id: string;
@@ -55,6 +16,12 @@ interface CheckoutFormProps {
   userEmail: string;
   cartItems: CartItem[];
 }
+
+// Ghana mobile prefixes — 0 followed by a digit in 2-5, then 8 more digits.
+// Covers MTN/Vodafone/AirtelTigo current ranges (024/025/054/055/059/020/
+// 050/027/057/026/056/023/028 etc.) without being overly strict about
+// which specific prefix belongs to which network.
+const GHANA_PHONE_REGEX = /^0[2345][0-9]{8}$/;
 
 export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps): React.JSX.Element {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -89,9 +56,22 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
   const handlePaystackPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
+
     if (!formData.fullName || !formData.phone || !formData.zoneId || !formData.specificLocation || !formData.landmark) {
       setError("Please fill in all your specific delivery steps and recipient information.");
+      return;
+    }
+
+    if (!GHANA_PHONE_REGEX.test(formData.phone.trim())) {
+      setError("Please enter a valid Ghana mobile number (e.g., 0540677535).");
+      return;
+    }
+
+    // Prevents silently sending a Paystack receipt to a placeholder
+    // address if the session somehow has no real email — better to block
+    // and ask than lose the customer's payment confirmation entirely.
+    if (!userEmail || !userEmail.includes("@")) {
+      setError("Your account is missing a valid email address. Please update your profile before checking out.");
       return;
     }
 
@@ -103,22 +83,19 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
         throw new Error("Paystack Public Key is missing from your environment variables.");
       }
 
-      const compiledAddressString = `Zone: ${selectedZone?.name} | Area: ${formData.specificLocation} | Landmark Details: ${formData.landmark}`;
-
       const { default: PaystackPop } = await import("@paystack/inline-js");
       const paystack = new PaystackPop();
-      
+
       paystack.newTransaction({
         key: publicKey,
         email: userEmail,
-        amount: Math.round(grandTotalPayable * 100), 
+        amount: Math.round(grandTotalPayable * 100),
         currency: "GHS",
         metadata: {
           custom_fields: [
             { display_name: "User ID", variable_name: "user_id", value: userId },
             { display_name: "Full Name", variable_name: "full_name", value: formData.fullName },
             { display_name: "Phone", variable_name: "phone", value: formData.phone },
-            { display_name: "Compiled Address", variable_name: "address", value: compiledAddressString },
           ]
         },
         onSuccess: async (transaction: any) => {
@@ -131,7 +108,17 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
                 deliveryData: {
                   fullName: formData.fullName,
                   phone: formData.phone,
-                  address: compiledAddressString
+                  // Structured fields instead of one compiled sentence —
+                  // the server previously had no reliable way to know
+                  // exactly which zone/fee was selected without parsing
+                  // free text. The verify API route needs updating to
+                  // accept and store these fields (not included here,
+                  // wasn't part of what was shared).
+                  zoneId: selectedZone?.id ?? null,
+                  zoneName: selectedZone?.name ?? null,
+                  shippingFee: shippingFee,
+                  specificLocation: formData.specificLocation,
+                  landmark: formData.landmark,
                 },
               }),
             });
@@ -143,7 +130,7 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
               setError("Payment was successful, but our database failed to save your order record. Please notify Al-Hikmah Support immediately.");
               setIsProcessing(false);
             }
-          } catch (err) {
+          } catch {
             setError("A network communication error blocked connection with our order verification server.");
             setIsProcessing(false);
           }
@@ -155,55 +142,60 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
       });
 
     } catch (err: any) {
-      console.error("Paystack system runtime execution breakdown:", err);
-      setError(err?.message || "Could not spin up the secure checkout overlay panel frame.");
+      console.error("Paystack checkout error:", err);
+      setError(err?.message || "Could not open the secure checkout panel.");
       setIsProcessing(false);
     }
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-      
-      {/* FORM INPUT WRAPPER COLUMN */}
-      <form onSubmit={handlePaystackPayment} className="lg:col-span-7 space-y-4 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-        <h2 className="font-serif text-base font-bold text-slate-900">Delivery Information</h2>
+
+      <form id="checkout-form" onSubmit={handlePaystackPayment} className="lg:col-span-7 space-y-4 bg-card border border-border rounded-md p-5">
+        <h2 className="font-serif text-base font-bold text-foreground">Delivery Information</h2>
 
         {error && (
-          <div className="flex items-start gap-2 bg-rose-50 border border-rose-100 p-3 rounded-xl text-xs font-medium text-rose-700 animate-in fade-in duration-200">
-            <ShieldAlert className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/20 p-3 rounded-sm text-xs font-medium text-destructive animate-in fade-in duration-200">
+            <ShieldAlert className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
             <span>{error}</span>
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Receiver Full Name</label>
+          <label htmlFor="checkout-name" className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Receiver Full Name</label>
           <input
+            id="checkout-name"
             type="text"
             required
+            disabled={isProcessing}
             placeholder="e.g., Kwame Mensah"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
+            className="w-full bg-background border border-border rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             value={formData.fullName}
             onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
           />
         </div>
-        
+
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Mobile Money Phone Number</label>
+          <label htmlFor="checkout-phone" className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Mobile Money Phone Number</label>
           <input
+            id="checkout-phone"
             type="tel"
             required
+            disabled={isProcessing}
             placeholder="e.g., 0540677535"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
+            className="w-full bg-background border border-border rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           />
         </div>
 
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Step 1: Select Delivery Zone</label>
+          <label htmlFor="checkout-zone" className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Step 1: Select Delivery Zone</label>
           <select
+            id="checkout-zone"
             required
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
+            disabled={isProcessing}
+            className="w-full bg-background border border-border rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             value={formData.zoneId}
             onChange={(e) => handleZoneChange(e.target.value)}
           >
@@ -215,11 +207,13 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
         </div>
 
         {selectedZone && (
-          <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Step 2: Select Location</label>
+          <div className="animate-in fade-in slide-in-from-top-1 duration-normal">
+            <label htmlFor="checkout-location" className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Step 2: Select Location</label>
             <select
+              id="checkout-location"
               required
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition"
+              disabled={isProcessing}
+              className="w-full bg-background border border-border rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
               value={formData.specificLocation}
               onChange={(e) => setFormData({ ...formData, specificLocation: e.target.value })}
             >
@@ -230,74 +224,86 @@ export function CheckoutForm({ userId, userEmail, cartItems }: CheckoutFormProps
             </select>
           </div>
         )}
-        
+
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1">Step 3: Specific Landmark / Address Details</label>
+          <label htmlFor="checkout-landmark" className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Step 3: Specific Landmark / Address Details</label>
           <textarea
+            id="checkout-landmark"
             required
+            disabled={isProcessing}
             rows={3}
             placeholder="e.g., Adjacent to the Star Assurance building, blue gate."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-700 focus:bg-white transition resize-none"
+            className="w-full bg-background border border-border rounded-sm px-4 py-2.5 text-sm focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50 resize-none"
             value={formData.landmark}
             onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
           />
         </div>
 
-        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs font-medium text-amber-800 leading-relaxed">
-          ⚠️ <strong>Fulfillment Notice:</strong> Orders are processed in weekly batches. Delivery timelines vary by location. Customers will be contacted via phone after payment validation to finalize dispatch tracking.
+        {/* Emoji removed, mapped to the warning token — this genuinely is
+            a warning-class notice, the cleanest semantic fit of any color
+            mapping done across this whole migration. */}
+        <div className="bg-warning/10 border border-warning/20 rounded-sm p-3 text-xs font-medium text-warning leading-relaxed flex gap-2">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <span><strong>Fulfillment Notice:</strong> Orders are processed in weekly batches. Delivery timelines vary by location. We&apos;ll contact you by phone after payment to confirm dispatch.</span>
         </div>
       </form>
 
-            {/* DYNAMIC ORDER SUMMARY SIDEBAR COLUMN */}
-      <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-        <h3 className="font-bold text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2.5">
+      <div className="lg:col-span-5 bg-card border border-border rounded-md p-5 space-y-4">
+        <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-wider border-b border-border pb-2.5">
           Order Summary ({totalItemsCount})
         </h3>
-        
-        <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto space-y-2 pr-1">
+
+        <div className="divide-y divide-border max-h-48 overflow-y-auto space-y-2 pr-1">
           {cartItems.map((item) => (
             <div key={item.id} className="pt-2 flex justify-between items-start text-xs gap-4">
               <div className="min-w-0 flex-1">
-                <h4 className="font-serif font-bold text-slate-900 truncate">{item.title}</h4>
-                <p className="text-[10px] text-slate-400 mt-0.5">Qty: {item.quantity}</p>
+                <h4 className="font-serif font-bold text-foreground truncate">{item.title}</h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Qty: {item.quantity}</p>
               </div>
-              <span className="font-bold text-slate-800 flex-shrink-0">
+              <span className="font-bold text-foreground flex-shrink-0">
                 ₵{(item.price * item.quantity).toFixed(2)}
               </span>
             </div>
           ))}
         </div>
 
-        <div className="border-t border-slate-100 pt-3 space-y-1.5 text-xs text-slate-600">
+        <div className="border-t border-border pt-3 space-y-1.5 text-xs text-muted-foreground">
           <div className="flex justify-between">
             <span>Books Total</span>
-            <span className="font-medium text-slate-800">GH₵ {bookTotalAmount.toFixed(2)}</span>
+            <span className="font-medium text-foreground">GH₵ {bookTotalAmount.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Shipping Charge</span>
-            <span className="font-medium text-slate-800">
+            <span className="font-medium text-foreground">
               {shippingFee === 0 ? "FREE" : `GH₵ ${shippingFee.toFixed(2)}`}
             </span>
           </div>
         </div>
 
-        <div className="border-t border-slate-100 pt-3 flex items-end justify-between">
+        <div className="border-t border-border pt-3 flex items-end justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Payable</span>
-            <p className="text-xl font-black text-emerald-900 mt-0.5">GH₵ {grandTotalPayable.toFixed(2)}</p>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Total Payable</span>
+            <p className="text-title font-black text-primary mt-0.5">GH₵ {grandTotalPayable.toFixed(2)}</p>
           </div>
         </div>
 
+        {/* Fixed properly this time: the button lives outside the <form>
+            element (it's in the sibling summary column), so type="submit"
+            alone does nothing without an explicit association — that's
+            actually why the original onClick existed, it wasn't
+            redundant. The correct fix is the form="checkout-form"
+            attribute below, which connects this button to the form by id
+            so it submits exactly once, with no onClick duplicate. */}
         <button
           type="submit"
-          onClick={handlePaystackPayment}
+          form="checkout-form"
           disabled={isProcessing || cartItems.length === 0}
-          className="w-full bg-emerald-800 hover:bg-emerald-900 text-amber-100 font-bold py-3.5 px-6 rounded-xl shadow transition text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed mt-2"
+          className="w-full bg-primary hover:bg-primary-hover text-primary-foreground font-bold py-3.5 px-6 rounded-sm transition-colors duration-fast ease-standard text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed mt-2"
         >
           {isProcessing ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Verifying checkout info...</span>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Opening secure payment...</span>
             </>
           ) : (
             <span>Pay GH₵ {grandTotalPayable.toFixed(2)}</span>

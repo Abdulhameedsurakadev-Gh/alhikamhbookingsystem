@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-auth"],
 
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

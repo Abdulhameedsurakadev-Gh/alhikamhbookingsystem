@@ -1,24 +1,25 @@
 // app/(store)/books/[id]/page.tsx
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { prisma } from "../../../../lib/prisma";
 import { BookGallery } from "./BookGallery";
+import { BookRecommendationCard } from "../BookRecommendationCard";
 import { AddToCartButton } from "../../../../components/ui/AddToCartButton";
-import { 
-  BookOpen, 
-  Calendar, 
-  Milestone, 
-  Layers, 
-  User, 
-  Tag, 
+import {
+  BookOpen,
+  Calendar,
+  Milestone,
+  Layers,
+  User,
+  Tag,
   Sparkles,
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  Zap
+  AlertCircle,
 } from "lucide-react";
 
-// ✅ ADD THESE v2.0 PORTAL IMPORTS FOR SECURE B2B PRICING TIERS
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { PriceDisplay, PriceComparison } from "../PriceDisplay";
@@ -27,10 +28,26 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+// New — lets Google (and link previews) see the actual book title instead
+// of a generic "Book Detail" for every page.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const book = await prisma.book.findUnique({
+    where: { id },
+    select: { title: true, description: true, author: { select: { name: true } } },
+  });
+
+  if (!book) return { title: "Book Not Found | Al-Hikmah Bookstore" };
+
+  return {
+    title: `${book.title} | Al-Hikmah Bookstore`,
+    description: book.description || `${book.title} by ${book.author.name}, available at Al-Hikmah Islamic Bookstore.`,
+  };
+}
+
 export default async function BookDetailPage({ params }: Props) {
   const { id } = await params;
 
-  // ✅ SECURE HOOK: Fetch complete user session data concurrently with database data queries
   const [session, book] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
     prisma.book.findUnique({
@@ -39,8 +56,8 @@ export default async function BookDetailPage({ params }: Props) {
         author: true,
         category: true,
         images: { orderBy: { sortOrder: "asc" } },
-        explainsBook: { include: { author: true } }, // The original text this book comments on
-        explanations: { include: { author: true } }, // Alternative commentaries on this book
+        explainsBook: { include: { author: true } },
+        explanations: { include: { author: true } },
       },
     })
   ]);
@@ -48,88 +65,78 @@ export default async function BookDetailPage({ params }: Props) {
   if (!book) notFound();
 
   const userRole = session?.user?.role || null;
-  // Safely extract verificationStatus from the extended Better-Auth database properties
+  // TODO: same open item flagged elsewhere in the codebase — if
+  // verificationStatus isn't showing up on session.user without this cast,
+  // the real fix belongs in lib/auth.ts's additional-fields config.
   const isVerified = (session?.user as any)?.verificationStatus === "APPROVED";
 
-  // 2. Query recommendations: Find parallel book models by the same scholar/author
-  const moreByAuthor = await prisma.book.findMany({
-    where: { authorId: book.authorId, NOT: { id: book.id } },
-    take: 4,
-    include: { category: true },
-  });
-
-  // 3. Query recommendations: Find related books within the same Islamic science category
-  const relatedBooks = await prisma.book.findMany({
-    where: { categoryId: book.categoryId, NOT: { id: book.id } },
-    take: 4,
-    include: { author: true },
-  });
-
-  // 4. Query other volumes in same set (if this is a multi-volume work)
-  const otherVolumes = book.volumeCount > 1 || book.volumeType === "MAJMUAT_MUJALLADAT"
-    ? await prisma.book.findMany({
-        where: {
-          AND: [
-            { volumeType: book.volumeType },
-            { NOT: { id: book.id } },
-            {
-              OR: [
-                // Match by author and similar volume count
-                { authorId: book.authorId, volumeCount: { gte: book.volumeCount - 1, lte: book.volumeCount + 1 } },
-              ]
-            }
-          ]
-        },
-        take: 4,
-        include: { author: true },
-      })
-    : [];
+  // Fixed: these three were independent, unrelated queries running
+  // sequentially (three separate round trips) instead of in parallel.
+  const [moreByAuthor, relatedBooks, otherVolumes] = await Promise.all([
+    prisma.book.findMany({
+      where: { authorId: book.authorId, NOT: { id: book.id } },
+      take: 4,
+      include: { category: true, author: true },
+    }),
+    prisma.book.findMany({
+      where: { categoryId: book.categoryId, NOT: { id: book.id } },
+      take: 4,
+      include: { author: true },
+    }),
+    book.volumeCount > 1 || book.volumeType === "MAJMUAT_MUJALLADAT"
+      ? prisma.book.findMany({
+          where: {
+            volumeType: book.volumeType,
+            NOT: { id: book.id },
+            authorId: book.authorId,
+            volumeCount: { gte: book.volumeCount - 1, lte: book.volumeCount + 1 },
+          },
+          take: 4,
+          include: { author: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return (
     <div className="space-y-12 max-w-7xl mx-auto px-4 py-6">
-      {/* Breadcrumb Hierarchy Navigation */}
-      <nav className="text-xs font-semibold text-slate-400 tracking-wide uppercase">
-        <Link href="/" className="hover:text-emerald-800 transition">Home</Link>
+      {/* Breadcrumb */}
+      <nav className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">
+        <Link href="/" className="hover:text-primary-hover transition-colors">Home</Link>
         <span className="mx-2">/</span>
-        <Link href="/books" className="hover:text-emerald-800 transition">Catalog</Link>
+        <Link href="/books" className="hover:text-primary-hover transition-colors">Catalog</Link>
         <span className="mx-2">/</span>
-        <Link href={`/books?category=${book.category.slug}`} className="hover:text-emerald-800 transition">{book.category.name}</Link>
+        <Link href={`/books?category=${book.category.slug}`} className="hover:text-primary-hover transition-colors">{book.category.name}</Link>
         <span className="mx-2">/</span>
-        <span className="text-slate-600 line-clamp-1 inline">{book.title}</span>
+        <span className="text-foreground line-clamp-1 inline">{book.title}</span>
       </nav>
 
-      {/* Main Grid: Media Viewer Box Left / Pricing & Metadata Panel Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* LEFT COLUMN: Active High-Definition Inspection Media Gallery */}
+
         <div className="lg:col-span-5">
-          <BookGallery 
-            coverImage={book.coverImage} 
-            title={book.title} 
-            images={book.images} 
+          <BookGallery
+            coverImage={book.coverImage}
+            title={book.title}
+            images={book.images}
           />
         </div>
 
-        {/* RIGHT COLUMN: Scholarly Purchase Action Panel */}
-        <div className="lg:col-span-7 space-y-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-7 space-y-6 bg-card border border-border rounded-md p-6">
           <div>
-            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-              <Layers className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground text-xs font-bold px-2.5 py-1 rounded-sm uppercase tracking-wider">
+              <Layers className="h-3 w-3" aria-hidden="true" />
               {book.knowledgeLevel} (Level)
             </span>
-            <h1 className="font-serif text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h1 className="font-serif text-heading lg:text-display font-extrabold text-foreground tracking-tight mt-3">
               {book.title}
             </h1>
-            <p className="text-sm text-slate-500 italic mt-2">
-              By <span className="font-semibold text-emerald-800">{book.author.name}</span> {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
+            <p className="text-sm text-muted-foreground italic mt-2">
+              By <span className="font-semibold text-primary">{book.author.name}</span> {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
             </p>
           </div>
 
-          {/* Pricing Row */}
-          <div className="border-y border-slate-100 py-4 flex items-center justify-between gap-4">
+          <div className="border-y border-border py-4 flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Price</p>
-              {/* ✅ THE UPGRADED PRICE BOUNDARY WRAPPER WITH WHOLESALE MARKUP SWITCHES */}
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Price</p>
               <div className="mt-1">
                 <PriceDisplay
                   retailPrice={Number(book.price)}
@@ -141,22 +148,25 @@ export default async function BookDetailPage({ params }: Props) {
                 />
               </div>
             </div>
-            
+
             <div className="text-right">
-              <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">Availability</p>
-              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full mt-1 transition ${
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Availability</p>
+              {/* Fixed: was using Zap (reads as "fast/energy") for out-of-stock
+                  — swapped to AlertCircle, matching Cart and the Books
+                  catalog, which both already use it for the same state. */}
+              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-sm mt-1 transition-colors ${
                 book.available
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
-                  : "bg-rose-50 text-rose-700 border border-rose-200"
+                  ? "bg-success/10 text-success border border-success/20"
+                  : "bg-destructive/10 text-destructive border border-destructive/20"
               }`}>
                 {book.available ? (
                   <>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                     In Stock
                   </>
                 ) : (
                   <>
-                    <Zap className="h-3.5 w-3.5" />
+                    <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     Out of Stock
                   </>
                 )}
@@ -164,10 +174,9 @@ export default async function BookDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* ✅ THE COMPREHENSIVE B2B COMPASSION TIERS DRAWER VIEW (Only for Verified Accounts) */}
           {userRole && isVerified && (
-            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 space-y-2">
-              <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            <div className="bg-background border border-border rounded-md p-4 space-y-2">
+              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                 Wholesale Price Matrix
               </h4>
               <PriceComparison
@@ -177,8 +186,7 @@ export default async function BookDetailPage({ params }: Props) {
             </div>
           )}
 
-          {/* Action Buy Buttons */}
-          <AddToCartButton 
+          <AddToCartButton
             book={{
               id: book.id,
               title: book.title,
@@ -186,81 +194,84 @@ export default async function BookDetailPage({ params }: Props) {
               weight: Number(book.weight || 0),
               coverImage: book.coverImage,
               available: book.available
-            }} 
+            }}
           />
-          
-          {/* Scholarly Quick Specs Grid */}
+
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Binding Cover</span>
-              <span className="font-bold text-slate-800 mt-0.5 block text-sm">
+            <div className="bg-background p-3 rounded-sm border border-border">
+              <span className="text-muted-foreground font-medium block">Binding Cover</span>
+              <span className="font-bold text-foreground mt-0.5 block text-sm">
                 {book.coverType === "AL_GHILAF_AL_MUQAWWA" ? "Hardcover" : "Softcover"}
               </span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Volume Count</span>
-              <span className="font-bold text-slate-800 mt-0.5 block text-sm">{book.volumeCount} {book.volumeCount > 1 ? "Vols" : "Vol"}</span>
+            <div className="bg-background p-3 rounded-sm border border-border">
+              <span className="text-muted-foreground font-medium block">Volume Count</span>
+              <span className="font-bold text-foreground mt-0.5 block text-sm">{book.volumeCount} {book.volumeCount > 1 ? "Vols" : "Vol"}</span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Publisher</span>
-              <span className="font-bold text-slate-800 mt-0.5 block text-sm truncate">{book.publisher}</span>
+            <div className="bg-background p-3 rounded-sm border border-border">
+              <span className="text-muted-foreground font-medium block">Publisher</span>
+              <span className="font-bold text-foreground mt-0.5 block text-sm truncate">{book.publisher}</span>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-slate-400 font-medium block">Text Type</span>
-              <span className="font-bold text-emerald-800 mt-0.5 block text-sm font-mono uppercase">{book.textType}</span>
+            <div className="bg-background p-3 rounded-sm border border-border">
+              <span className="text-muted-foreground font-medium block">Text Type</span>
+              <span className="font-bold text-primary mt-0.5 block text-sm uppercase">{book.textType}</span>
             </div>
           </div>
 
-          {/* Additional Details & Contextual B2B Marketing Upsell Triggers */}
+          {/* Fixed: raw blue-* mapped to secondary — a neutral fact box
+              (published year, language) isn't a status, so it shouldn't
+              use success/warning/destructive; secondary ("quiet accent")
+              is the right fit. */}
           {book.publishedYear && (
-            <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-xs">
-              <span className="text-blue-700 font-semibold">Published:</span> {book.publishedYear} AH
-              {book.language && <span className="text-blue-700 font-semibold ml-2">• Language:</span>}
-              {book.language && <span className="text-blue-600 ml-1">{book.language}</span>}
+            <div className="bg-secondary/20 border border-secondary/40 p-3 rounded-sm text-xs">
+              <span className="text-foreground font-semibold">Published:</span> {book.publishedYear} AH
+              {book.language && <span className="text-foreground font-semibold ml-2">• Language:</span>}
+              {book.language && <span className="text-muted-foreground ml-1">{book.language}</span>}
             </div>
           )}
 
-                    {/* Scenario A: Verified Partner Notification Notice Box */}
+          {/* Confirmed B2B pricing active — mapped to success, since this
+              is literally confirming a positive/active state. */}
           {userRole && userRole !== "CUSTOMER" && isVerified && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex gap-2.5 items-start">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <div className="bg-success/10 border border-success/20 rounded-sm p-3.5 flex gap-2.5 items-start">
+              <ShieldCheck className="h-4 w-4 text-success mt-0.5 flex-shrink-0" aria-hidden="true" />
               <div className="text-xs">
-                <p className="font-bold text-emerald-800">
+                <p className="font-bold text-foreground">
                   {userRole === "MALAM" ? "Malam Reseller Pricing Active" : "Madrasah Bulk Terms Unlocked"}
                 </p>
-                <p className="text-emerald-700/90 mt-0.5">
-                  {userRole === "MALAM" 
-                    ? "Your wholesale educator margin slab has been parsed automatically from cost." 
-                    : "Your institutional wholesale values are active for bulk dispatch distribution dispatches."}
+                <p className="text-muted-foreground mt-0.5">
+                  {userRole === "MALAM"
+                    ? "Your wholesale educator pricing has been applied automatically."
+                    : "Your institutional wholesale pricing is active for bulk orders."}
                 </p>
               </div>
             </div>
           )}
 
-          {/* Scenario B: Application Awaiting Moderation Information Box */}
+          {/* Pending verification — mapped to warning, which is exactly
+              what that token means. */}
           {userRole && !isVerified && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 flex gap-2.5 items-start">
-              <Calendar className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="bg-warning/10 border border-warning/20 rounded-sm p-3.5 flex gap-2.5 items-start">
+              <Calendar className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" aria-hidden="true" />
               <div className="text-xs">
-                <p className="font-bold text-blue-800">Application Under Verification Review</p>
-                <p className="text-blue-700/90 mt-0.5">
-                  Abdul is currently validating your submitted institutional credentials. Standard store retail values will apply across the storefront until validation maps completely.
+                <p className="font-bold text-foreground">Application Under Verification Review</p>
+                <p className="text-muted-foreground mt-0.5">
+                  We&apos;re currently reviewing your submitted credentials. Standard retail pricing applies storewide until verification is complete.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Scenario C: Public Guest Upsell Trigger Banner */}
           {!userRole && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-2.5 items-start">
-              <Sparkles className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="bg-secondary/20 border border-secondary/40 rounded-sm p-3.5 flex gap-2.5 items-start">
+              <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" aria-hidden="true" />
               <div className="text-xs">
-                <p className="font-bold text-amber-800">Are you an Islamic Educator or School?</p>
-                <p className="text-amber-700/90 mt-0.5">
-                  Unlock partner pricing tiers on all books ≥ 50 GHS. 
-                  <Link href="/malam-apply" className="font-bold text-emerald-800 underline mx-1 hover:text-emerald-900">Become a Malam</Link>
+                <p className="font-bold text-foreground">Are you an Islamic Educator or School?</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Unlock partner pricing on all books ≥ 50 GHS.{" "}
+                  <Link href="/malam-apply" className="font-bold text-primary underline mx-1 hover:text-primary-hover">Become a Malam</Link>
                   or
-                  <Link href="/madrasah-apply" className="font-bold text-emerald-800 underline ml-1 hover:text-emerald-900">Register your Madrasah</Link>.
+                  <Link href="/madrasah-apply" className="font-bold text-primary underline ml-1 hover:text-primary-hover">Register your Madrasah</Link>.
                 </p>
               </div>
             </div>
@@ -269,61 +280,58 @@ export default async function BookDetailPage({ params }: Props) {
 
       </div>
 
-      {/* SECTION 2 & 3: Description & Searchable Table of Contents Text */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-slate-200 pt-8">
+      {/* Description & Table of Contents */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 border-t border-border pt-8">
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="font-serif text-xl font-bold text-slate-900 flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-emerald-700" /> About This Work
+          <h3 className="font-serif text-title font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" aria-hidden="true" /> About This Work
           </h3>
-          <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            {book.description || "No analytical overview statement has been cataloged for this item text."}
+          <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line bg-card p-5 rounded-md border border-border">
+            {book.description || "No description has been added for this book yet."}
           </p>
         </div>
 
-        {/* Searchable Text Table of Contents Area */}
         <div className="lg:col-span-1 space-y-4">
-          <h3 className="font-serif text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Tag className="h-5 w-5 text-emerald-700" /> Table of Contents
+          <h3 className="font-serif text-title font-bold text-foreground flex items-center gap-2">
+            <Tag className="h-5 w-5 text-primary" aria-hidden="true" /> Table of Contents
           </h3>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 text-xs max-h-64 overflow-y-auto font-mono text-slate-600 leading-normal whitespace-pre-wrap shadow-sm">
-            {book.tableOfContents || "Table of contents index text has not been typed out for this volume yet."}
+          <div className="bg-card border border-border rounded-md p-4 text-xs max-h-64 overflow-y-auto text-muted-foreground leading-normal whitespace-pre-wrap">
+            {book.tableOfContents || "Table of contents has not been added for this book yet."}
           </div>
         </div>
       </div>
 
-      {/* SECTION 4: Scholarly Relationship Mapping Apparent Fields */}
+      {/* Text Linkage — was a dark emerald gradient, rebuilt flat */}
       {(book.explainsBook || book.explanations.length > 0) && (
-        <section className="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 text-white rounded-2xl p-6 border border-emerald-800 shadow-md space-y-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-amber-200 flex items-center gap-2">
-            <Milestone className="h-4 w-4" /> Classical Text Linkage Graph
+        <section className="bg-card border border-border rounded-md p-6 space-y-6">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+            <Milestone className="h-4 w-4" aria-hidden="true" /> Related Classical Texts
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-            {/* Parent Text Block */}
             {book.explainsBook && (
-              <div className="bg-white/5 border border-white/10 p-4 rounded-xl space-y-2 flex flex-col justify-between">
+              <div className="bg-background border border-border p-4 rounded-sm space-y-2 flex flex-col justify-between">
                 <div>
-                  <span className="text-emerald-300 font-medium uppercase tracking-wider block text-[10px]">Source Reference Text (Matn)</span>
-                  <p className="text-sm font-serif font-bold text-amber-100 mt-1">This work explains the core text:</p>
-                  <p className="font-medium text-slate-200 mt-2 text-sm">{book.explainsBook.title}</p>
-                  <p className="text-slate-400 italic">By {book.explainsBook.author.name}</p>
+                  <span className="text-primary font-medium uppercase tracking-wider block text-[10px]">Source Reference Text (Matn)</span>
+                  <p className="text-sm font-serif font-bold text-foreground mt-1">This work explains the core text:</p>
+                  <p className="font-medium text-foreground mt-2 text-sm">{book.explainsBook.title}</p>
+                  <p className="text-muted-foreground italic">By {book.explainsBook.author.name}</p>
                 </div>
-                <Link href={`/books/${book.explainsBook.id}`} className="mt-4 inline-flex items-center gap-1 bg-white/10 hover:bg-amber-500 hover:text-emerald-950 px-3 py-2 rounded-lg font-bold transition text-center justify-center">
-                  View Original Text <ArrowRight className="h-3 w-3" />
+                <Link href={`/books/${book.explainsBook.id}`} className="mt-4 inline-flex items-center gap-1 bg-secondary hover:bg-primary text-secondary-foreground hover:text-primary-foreground px-3 py-2 rounded-sm font-bold transition-colors duration-fast text-center justify-center">
+                  View Original Text <ArrowRight className="h-3 w-3" aria-hidden="true" />
                 </Link>
               </div>
             )}
 
-            {/* Commentaries Block */}
             {book.explanations.length > 0 && (
-              <div className="bg-white/5 border border-white/10 p-4 rounded-xl space-y-2">
-                <span className="text-emerald-300 font-medium uppercase tracking-wider block text-[10px]">Available Shurooh (Commentaries)</span>
-                <p className="text-sm font-serif font-bold text-amber-100 mt-1">Scholarly explanations for this text:</p>
+              <div className="bg-background border border-border p-4 rounded-sm space-y-2">
+                <span className="text-primary font-medium uppercase tracking-wider block text-[10px]">Available Shurooh (Commentaries)</span>
+                <p className="text-sm font-serif font-bold text-foreground mt-1">Scholarly explanations for this text:</p>
                 <div className="flex flex-col gap-1.5 mt-2 max-h-48 overflow-y-auto">
                   {book.explanations.map((exp) => (
-                    <Link key={exp.id} href={`/books/${exp.id}`} className="block bg-white/5 hover:bg-emerald-800/40 p-2 rounded border border-white/5 transition text-slate-200 hover:text-white">
-                      <span className="font-medium block text-amber-50">{exp.title}</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">By {exp.author.name}</span>
+                    <Link key={exp.id} href={`/books/${exp.id}`} className="block bg-card hover:bg-surface-hover p-2 rounded-sm border border-border transition-colors text-foreground">
+                      <span className="font-medium block">{exp.title}</span>
+                      <span className="text-[10px] text-muted-foreground block mt-0.5">By {exp.author.name}</span>
                     </Link>
                   ))}
                 </div>
@@ -333,167 +341,63 @@ export default async function BookDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* SECTION 5: Author Biography Card */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-        <h3 className="font-serif text-xl font-bold text-slate-900 flex items-center gap-2">
-          <User className="h-5 w-5 text-emerald-700" /> Biography of the Scholar
+      {/* Author Biography */}
+      <section className="bg-card border border-border rounded-md p-6 space-y-4">
+        <h3 className="font-serif text-title font-bold text-foreground flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" aria-hidden="true" /> Biography of the Scholar
         </h3>
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-          <h4 className="font-serif font-bold text-base text-slate-900">
+        <div className="bg-background p-4 rounded-sm border border-border space-y-2">
+          <h4 className="font-serif font-bold text-base text-foreground">
             {book.author.name} {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
           </h4>
           {book.author.diedAH && (
-            <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1">
-              <Calendar className="h-3 w-3" /> Died: {book.author.diedAH} AH (Hijri Year)
+            <p className="text-xs font-semibold text-primary flex items-center gap-1">
+              <Calendar className="h-3 w-3" aria-hidden="true" /> Died: {book.author.diedAH} AH (Hijri Year)
             </p>
           )}
-          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-1">
-            {book.author.bio || "Biographical tracking records have not been fully populated for this scholar yet."}
+          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line pt-1">
+            {book.author.bio || "A biography has not been added for this scholar yet."}
           </p>
         </div>
       </section>
 
-      {/* SECTION 6: Other Volumes in This Set */}
+      {/* Other Volumes / More by Author / Related Works — all three now
+          share BookRecommendationCard instead of three copies of the same
+          markup (and the same scale-102 bug three times over). */}
       {otherVolumes.length > 0 && (
-        <section className="space-y-4 border-t border-slate-100 pt-6">
-          <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4 text-amber-500" /> Other Volumes in This Set
+        <section className="space-y-4 border-t border-border pt-6">
+          <h3 className="font-serif text-heading font-bold text-foreground flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-secondary" aria-hidden="true" /> Other Volumes in This Set
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {otherVolumes.map((volBook) => (
-              <Link 
-                key={volBook.id} 
-                href={`/books/${volBook.id}`} 
-                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  !volBook.available ? "opacity-60" : ""
-                }`}
-              >
-                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                  {volBook.coverImage ? (
-                    <img src={volBook.coverImage} alt={volBook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
-                  ) : (
-                    <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{volBook.title}</span>
-                  )}
-                  {!volBook.available && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
-                  <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-800 transition">{volBook.title}</h4>
-                  <p className="text-[10px] text-slate-500 truncate">By {volBook.author.name}</p>
-                  
-                                   {/* ✅ UPGRADED PRICE CONTAINER IN OTHER VOLUMES RECS */}
-                  <div className="pt-1">
-                    <PriceDisplay
-                      retailPrice={Number(volBook.price)}
-                      supplierCost={volBook.supplierCost ? Number(volBook.supplierCost) : null}
-                      userRole={userRole}
-                      isVerified={isVerified}
-                      showTiered={false}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </Link>
+              <BookRecommendationCard key={volBook.id} book={volBook} userRole={userRole} isVerified={isVerified} />
             ))}
           </div>
         </section>
       )}
 
-      {/* SECTION 7: More Books By This Scholar */}
       {moreByAuthor.length > 0 && (
-        <section className="space-y-4 border-t border-slate-100 pt-6">
-          <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4 text-amber-500" /> More from this Scholar
+        <section className="space-y-4 border-t border-border pt-6">
+          <h3 className="font-serif text-heading font-bold text-foreground flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-secondary" aria-hidden="true" /> More from this Scholar
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {moreByAuthor.map((abook) => (
-              <Link 
-                key={abook.id} 
-                href={`/books/${abook.id}`} 
-                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  !abook.available ? "opacity-60" : ""
-                }`}
-              >
-                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                  {abook.coverImage ? (
-                    <img src={abook.coverImage} alt={abook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
-                  ) : (
-                    <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{abook.title}</span>
-                  )}
-                  {!abook.available && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
-                  <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-emerald-800 transition">{abook.title}</h4>
-                  
-                  {/* ✅ UPGRADED PRICE CONTAINER IN MORE BY SCHOLAR RECS */}
-                  <div className="pt-1">
-                    <PriceDisplay
-                      retailPrice={Number(abook.price)}
-                      supplierCost={abook.supplierCost ? Number(abook.supplierCost) : null}
-                      userRole={userRole}
-                      isVerified={isVerified}
-                      showTiered={false}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </Link>
+              <BookRecommendationCard key={abook.id} book={abook} userRole={userRole} isVerified={isVerified} showAuthor={false} />
             ))}
           </div>
         </section>
       )}
 
-      {/* SECTION 8: Related Islamic Sciences Volumes */}
       {relatedBooks.length > 0 && (
-        <section className="space-y-4 border-t border-slate-100 pt-6">
-          <h3 className="font-serif text-lg font-bold text-slate-900 flex items-center gap-1.5">
-            <BookOpen className="h-4 w-4 text-emerald-700" /> Related Works in {book.category.name}
+        <section className="space-y-4 border-t border-border pt-6">
+          <h3 className="font-serif text-heading font-bold text-foreground flex items-center gap-1.5">
+            <BookOpen className="h-4 w-4 text-primary" aria-hidden="true" /> Related Works in {book.category.name}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {relatedBooks.map((rbook) => (
-              <Link 
-                key={rbook.id} 
-                href={`/books/${rbook.id}`} 
-                className={`bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between group ${
-                  !rbook.available ? "opacity-60" : ""
-                }`}
-              >
-                <div className="aspect-[3/4] bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                  {rbook.coverImage ? (
-                    <img src={rbook.coverImage} alt={rbook.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-200" />
-                  ) : (
-                    <span className="text-[10px] text-slate-400 p-2 text-center line-clamp-3 font-serif">{rbook.title}</span>
-                  )}
-                  {!rbook.available && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold bg-black/50 px-2 py-1 rounded">Out of Stock</span>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 space-y-1 flex-1 flex flex-col justify-end">
-                  <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1 group-hover:text-emerald-800 transition">{rbook.title}</h4>
-                  <p className="text-[10px] text-slate-500 truncate">By {rbook.author.name}</p>
-                  
-                  {/* ✅ UPGRADED PRICE CONTAINER IN RELATED SCIENCE RECS */}
-                  <div className="pt-1">
-                    <PriceDisplay
-                      retailPrice={Number(rbook.price)}
-                      supplierCost={rbook.supplierCost ? Number(rbook.supplierCost) : null}
-                      userRole={userRole}
-                      isVerified={isVerified}
-                      showTiered={false}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </Link>
+              <BookRecommendationCard key={rbook.id} book={rbook} userRole={userRole} isVerified={isVerified} />
             ))}
           </div>
         </section>
@@ -501,5 +405,3 @@ export default async function BookDetailPage({ params }: Props) {
     </div>
   );
 }
-
-

@@ -13,28 +13,30 @@ export function SortDropdown({ currentSort }: { currentSort: string }) {
       <select
         value={currentSort}
         onChange={(e) => {
-          // Type-safe URL mutations natively handled through Next.js state hooks
           const nextParams = new URLSearchParams(searchParams.toString());
-          
+
           if (e.target.value) {
             nextParams.set("sort", e.target.value);
           } else {
             nextParams.delete("sort");
           }
-          
-          // Clear current loaded page offsets to reset scroll states during view changes
+
           nextParams.delete("page");
-          
+
           router.push(`${pathname}?${nextParams.toString()}`);
         }}
-        className="block w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-700 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 cursor-pointer"
+        className="block w-full rounded-sm border border-border bg-card py-1.5 pl-3 pr-8 text-xs font-semibold text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors duration-fast cursor-pointer"
       >
         <option value="">Sort: Default</option>
         <option value="newest">Newest Added</option>
         <option value="price-asc">Price: Low to High</option>
         <option value="price-desc">Price: High to Low</option>
-        <option value="title-asc">Title: A to Z</option>
-        <option value="title-desc">Title: Z to A</option>
+        {/* Fixed: these values now match what books/page.tsx's switch
+            statement actually checks for ("title-az" / "title-za") — they
+            previously said "title-asc" / "title-desc", which the page
+            silently ignored, so title sorting has never worked. */}
+        <option value="title-az">Title: A to Z</option>
+        <option value="title-za">Title: Z to A</option>
       </select>
     </div>
   );

@@ -168,4 +168,8 @@
     font-family: var(--font-serif);
     color: var(--color-foreground);
   }
+  ::selection {
+    background-color: var(--color-selection);
+    color: var(--color-foreground);
+  }
 }

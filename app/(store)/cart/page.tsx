@@ -1,12 +1,13 @@
 // app/(store)/cart/page.tsx
 import { CartClient } from "./CartClient";
 
-// Force Next.js to evaluate this endpoint dynamically on every page request pass
-export const dynamic = "force-dynamic";
+// Removed force-dynamic — this page does no server-side data fetching at
+// all (cart lives entirely in client-side Zustand/localStorage), so there
+// was nothing here that actually needed per-request dynamic evaluation.
 
 export const metadata = {
   title: "Your Cart | Al-Hikmah Bookstore",
-  description: "Review your selected classical reference texts and commentaries.",
+  description: "Review the books in your cart before proceeding to checkout.",
 };
 
 export default function CartPage() {

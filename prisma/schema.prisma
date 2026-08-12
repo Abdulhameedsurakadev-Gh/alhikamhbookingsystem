@@ -162,6 +162,18 @@ model Order {
   deliveryDate      DateTime?      // Friday delivery date
   paymentMethod     PaymentMethod? // PAYSTACK | CASH_ON_DELIVERY
   location          String?        // "Accra", "Kasoa" - needed for COD check
+
+  // NEW — structured delivery fields, replacing the single compiled
+  // shippingAddress string as the real source of truth going forward.
+  // shippingAddress is kept for backward compatibility with existing
+  // orders and as a human-readable summary, but new orders populate
+  // these directly so they can be queried, filtered by zone, and used
+  // to generate rider manifests without re-parsing text.
+  deliveryZone      String?        // e.g. "Kasoa Communities (GH₵6)"
+  deliveryArea      String?        // e.g. "Peacetown"
+  deliveryLandmark  String?        // free-text directions
+  deliveryFee       Decimal?       @db.Decimal(10, 2)
+  recipientName     String?        // who's actually receiving the parcel
   
   user              User        @relation(fields: [userId], references: [id])
   orderItems        OrderItem[]

@@ -1,7 +1,7 @@
 // components/ui/AddToCartButton.tsx
 "use client";
 
-import { useCartStore, CartItem } from "../../store/useCartStore"; // Verified path to step out of components/ui into store/
+import { useCartStore } from "../../store/useCartStore";
 import { ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -21,7 +21,6 @@ export function AddToCartButton({ book }: AddToCartButtonProps): React.JSX.Eleme
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
 
-  // React 19 Hydration Safeguard
   const [isMounted, setIsMounted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -30,7 +29,7 @@ export function AddToCartButton({ book }: AddToCartButtonProps): React.JSX.Eleme
 
   if (!isMounted) {
     return (
-      <button disabled className="w-full bg-slate-200 text-slate-400 font-bold py-3.5 px-6 rounded-xl text-xs opacity-50 cursor-not-allowed border-0">
+      <button disabled className="w-full bg-muted text-muted-foreground font-bold py-3.5 px-6 rounded-sm text-xs opacity-50 cursor-not-allowed border-0">
         Loading Inventory...
       </button>
     );
@@ -57,18 +56,23 @@ export function AddToCartButton({ book }: AddToCartButtonProps): React.JSX.Eleme
     <button
       onClick={handleAddToCart}
       disabled={isOutOfStock}
-      className={`w-full font-bold py-3.5 px-6 rounded-xl shadow-md transition text-sm tracking-wide flex items-center justify-center gap-2 border-0 ${
-        isOutOfStock 
-          ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60" 
-          : "bg-emerald-800 hover:bg-emerald-900 text-amber-100 cursor-pointer"
+      className={`w-full font-bold py-3.5 px-6 rounded-sm transition-colors duration-fast ease-standard text-sm tracking-wide flex items-center justify-center gap-2 border-0 ${
+        isOutOfStock
+          ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+          : "bg-primary hover:bg-primary-hover text-primary-foreground cursor-pointer"
       }`}
     >
       {isOutOfStock ? (
         <span>Out of Stock</span>
       ) : (
         <>
-          <ShoppingBag className="h-4 w-4" />
-          <span>Add to Student Basket</span>
+          <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+          {/* "Student Basket" → "Add to Cart" — same fix as Signup's
+              "Create Student Profile" earlier: your actual buyers include
+              malams, madrasahs, and parents, not just students. Also
+              matches the Cart page's own "Basket" → "Cart" vocabulary
+              standardization. */}
+          <span>Add to Cart</span>
         </>
       )}
     </button>

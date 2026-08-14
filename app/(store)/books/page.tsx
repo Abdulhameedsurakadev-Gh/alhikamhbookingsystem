@@ -4,13 +4,15 @@ import Image from "next/image";
 import { prisma } from "../../../lib/prisma";
 import { FilterSidebar } from "./FilterSidebar";
 import { KnowledgeLevel, TextType, CoverType, VolumeType } from "@prisma/client";
-import { Search, X, BookOpen, Star, Sparkles, AlertCircle } from "lucide-react";
+import { Search, X, BookOpen, Star, Sparkles } from "lucide-react";
 import { SortDropdown } from "./SortDropdown";
-import { BookRequestCTA } from "../../components/shared/BookRequestCTA";
 
+<<<<<<< HEAD
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { PriceDisplay } from "./PriceDisplay";
+=======
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
 
 interface SearchParams {
   search?: string;
@@ -40,6 +42,7 @@ export default async function BooksPage({
 
   const BOOKS_PER_PAGE = 12;
   const currentPage = Math.max(1, parseInt(params.page || "1", 10));
+<<<<<<< HEAD
 
   const [session, categories] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
@@ -51,6 +54,9 @@ export default async function BooksPage({
   // If better-auth isn't returning this field on session.user, the fix
   // belongs in lib/auth.ts (declaring it as an additional field), not here.
   const isVerified = (session?.user as any)?.verificationStatus === "APPROVED";
+=======
+  const skip = (currentPage - 1) * BOOKS_PER_PAGE;
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
 
   const whereClause: any = {};
   if (search) {
@@ -83,16 +89,30 @@ export default async function BooksPage({
       break;
   }
 
+<<<<<<< HEAD
   const [allBooks, totalFilteredCount] = await Promise.all([
+=======
+  // 3. Execute DB Operations (Running parallel queries for high processing velocity)
+  const [allBooks, totalFilteredCount, totalStoreCount, categories] = await Promise.all([
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
     prisma.book.findMany({
       where: whereClause,
       include: { author: true, category: true, explanations: true },
       orderBy: orderByClause,
       take: currentPage * BOOKS_PER_PAGE,
     }),
+<<<<<<< HEAD
     prisma.book.count({ where: whereClause }),
   ]);
 
+=======
+    prisma.book.count({ where: whereClause }), // Filtered criteria count
+    prisma.book.count(), // absolute catalog maximum limit
+    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } })
+  ]);
+
+  // Fetch contextual carousels only when no active filter constraints are present
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
   const hasActiveFilters = search || categorySlug || level || textType || coverType || volumeType;
 
   const [newArrivals, beginnerFriendly] = hasActiveFilters
@@ -102,6 +122,10 @@ export default async function BooksPage({
         prisma.book.findMany({ where: { knowledgeLevel: "MUBTADI" }, take: 5, include: { author: true, category: true } }),
       ]);
 
+<<<<<<< HEAD
+=======
+  // Helper url modifier path assembly logic
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
   const getRemoveFilterUrl = (keyToDelete: string) => {
     const activeKeys = { ...params };
     delete (activeKeys as any)[keyToDelete];
@@ -112,6 +136,7 @@ export default async function BooksPage({
     return `/books?${searchParams.toString()}`;
   };
 
+<<<<<<< HEAD
   // Translates the raw enum into plain, customer-facing text — matches
   // Voice & Copy's "simple language over technical language" rule.
   const formatBinding = (coverType: CoverType, volumeCount: number) => {
@@ -119,6 +144,9 @@ export default async function BooksPage({
     const volumes = volumeCount > 1 ? `${volumeCount} Volumes` : "1 Volume";
     return `${binding} · ${volumes}`;
   };
+=======
+  const hasNextPage = totalFilteredCount > allBooks.length;
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-16">
@@ -188,7 +216,10 @@ export default async function BooksPage({
             </div>
           </section>
 
+<<<<<<< HEAD
           {/* New Arrivals list slider */}
+=======
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
           {newArrivals.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
@@ -197,13 +228,19 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {newArrivals.map((book) => (
+<<<<<<< HEAD
                   <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-card border border-border rounded-md p-3 hover:border-border-hover transition-colors duration-fast flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-muted rounded-sm flex items-center justify-center overflow-hidden relative">
+=======
+                  <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
+                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                       {book.coverImage ? (
                         <Image src={book.coverImage} alt={book.title} fill className="object-cover" sizes="160px" />
                       ) : (
                         <span className="text-[9px] text-muted-foreground font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
+<<<<<<< HEAD
                       {!book.available && (
                         <div className="absolute inset-0 bg-foreground/20 flex items-center justify-center">
                           <span className="text-primary-foreground text-[9px] font-bold bg-foreground/50 px-1.5 py-0.5 rounded-sm">Out of Stock</span>
@@ -223,6 +260,13 @@ export default async function BooksPage({
                           size="sm"
                         />
                       </div>
+=======
+                    </div>
+                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
+                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
+                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
+                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                     </div>
                   </Link>
                 ))}
@@ -230,9 +274,12 @@ export default async function BooksPage({
             </section>
           )}
 
+<<<<<<< HEAD
           {/* Beginner Friendly list slider — near-identical to New Arrivals
               above; worth extracting into a shared BookStrip component
               later, same pattern as the BookCard extraction. */}
+=======
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
           {beginnerFriendly.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
@@ -241,13 +288,19 @@ export default async function BooksPage({
               </div>
               <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
                 {beginnerFriendly.map((book) => (
+<<<<<<< HEAD
                   <Link key={book.id} href={`/books/${book.id}`} className={`w-40 flex-shrink-0 bg-card border border-border rounded-md p-3 hover:border-border-hover transition-colors duration-fast flex flex-col justify-between ${!book.available ? "opacity-60" : ""}`}>
                     <div className="h-36 bg-muted rounded-sm flex items-center justify-center overflow-hidden relative">
+=======
+                                    <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
+                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                       {book.coverImage ? (
                         <Image src={book.coverImage} alt={book.title} fill className="object-cover" sizes="160px" />
                       ) : (
                         <span className="text-[9px] text-muted-foreground font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
+<<<<<<< HEAD
                       {!book.available && (
                         <div className="absolute inset-0 bg-foreground/20 flex items-center justify-center">
                           <span className="text-primary-foreground text-[9px] font-bold bg-foreground/50 px-1.5 py-0.5 rounded-sm">Out of Stock</span>
@@ -267,6 +320,13 @@ export default async function BooksPage({
                           size="sm"
                         />
                       </div>
+=======
+                    </div>
+                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
+                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
+                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
+                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                     </div>
                   </Link>
                 ))}
@@ -314,6 +374,7 @@ export default async function BooksPage({
         </div>
       )}
 
+<<<<<<< HEAD
       {/* Main Split Grid View System */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Fixed: this wrapper previously had "hidden lg:block", which
@@ -339,6 +400,32 @@ export default async function BooksPage({
             <div className="text-xs font-semibold text-muted-foreground min-w-0">
               Found <span className="text-foreground font-bold">{totalFilteredCount}</span> authentic volumes {hasActiveFilters && "matching parameters"}
             </div>
+=======
+      {/* Combined Responsive Filtering Panel Layout Grid Wrapper */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start pt-2">
+        <aside className="lg:col-span-1">
+          <FilterSidebar categories={categories} activeFilters={params} />
+        </aside>
+
+        <main className="lg:col-span-3 space-y-4">
+          
+          {/* Catalog Controls: Statistics Indicator & Sorting Action Dropdown Selector */}
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3 px-1">
+            
+            {/* Catalog Statistics (Feature 11) */}
+            <div className="text-xs text-slate-500 font-medium">
+              {totalFilteredCount === 0 ? (
+                <span>0 Books Found</span>
+              ) : (
+                <span>
+                  Showing{" "} <span className="font-semibold text-slate-800">{allBooks.length}</span>{" "} of {""} 
+                  <span className="font-semibold text-slate-800">{totalFilteredCount}</span>{" "} Books
+                </span>
+              )}
+            </div>
+
+            {/* Sorting Interactive Control (Feature 6) */}
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
             <SortDropdown currentSort={sort} />
           </div>
 
@@ -357,16 +444,27 @@ export default async function BooksPage({
             </div>
           ) : (
             <div>
+<<<<<<< HEAD
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {allBooks.map((book) => (
                   <div key={book.id} className={`flex flex-row lg:flex-col bg-card border border-border rounded-md p-3 lg:p-4 hover:shadow-subtle transition-all duration-fast ease-standard gap-4 group relative ${!book.available ? "opacity-60" : ""}`}>
 
                     <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-muted rounded-sm flex items-center justify-center overflow-hidden relative">
+=======
+              {/* Layout transformation: Single structural rows on smaller breakpoints, three-tier grid slots on desktop */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {allBooks.map((book) => (
+                  <div key={book.id} className="flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative">
+                    
+                    {/* Imagery Canvas Node */}
+                    <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                       {book.coverImage ? (
                         <Image src={book.coverImage} alt={book.title} fill className="object-cover group-hover:scale-[1.02] transition-transform duration-300" sizes="(max-width: 1024px) 96px, 33vw" />
                       ) : (
                         <span className="text-[10px] text-muted-foreground font-serif px-2 text-center line-clamp-3">{book.title}</span>
                       )}
+<<<<<<< HEAD
 
                       {!book.available && (
                         <div className="absolute inset-0 bg-foreground/20 flex items-center justify-center">
@@ -378,10 +476,19 @@ export default async function BooksPage({
                       )}
 
                       <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-sm z-10">
+=======
+                      
+                      {/* Top Corner Structural Text Class Indicator Label Tag */}
+                      <span className="absolute top-1.5 right-1.5 bg-emerald-800 text-amber-100 font-mono text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shadow">
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                         {book.textType}
                       </span>
                     </div>
 
+<<<<<<< HEAD
+=======
+                    {/* Operational Information Columns */}
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                     <div className="flex-1 flex flex-col justify-between lg:justify-start lg:space-y-1">
                       <div>
                         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide block">
@@ -398,6 +505,7 @@ export default async function BooksPage({
                         </p>
                       </div>
 
+<<<<<<< HEAD
                       <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-border gap-2">
                         <PriceDisplay
                           retailPrice={Number(book.price)}
@@ -414,8 +522,17 @@ export default async function BooksPage({
                               ? "bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
                               : "bg-muted text-muted-foreground cursor-not-allowed pointer-events-none"
                           }`}
+=======
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-slate-100">
+                        <span className="text-sm lg:text-base font-bold text-slate-900">
+                          GH₵ {Number(book.price).toFixed(2)}
+                        </span>
+                        <Link
+                          href={`/books/${book.id}`}
+                          className="bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700 font-semibold px-3 py-1.5 rounded-md text-xs transition"
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
                         >
-                          {book.available ? "View Book" : "Out"}
+                          View Book
                         </Link>
                       </div>
                     </div>
@@ -423,9 +540,14 @@ export default async function BooksPage({
                   </div>
                 ))}
               </div>
-            </div>
+              </div>
           )}
+<<<<<<< HEAD
 
+=======
+          
+          {/* "Load More" Append Control Element (Feature 7) */}
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
           {allBooks.length < totalFilteredCount && (
             <div className="flex justify-center pt-6">
               <Link
@@ -443,12 +565,105 @@ export default async function BooksPage({
               </Link>
             </div>
           )}
+<<<<<<< HEAD
 
           <div id="book-request">
             <BookRequestCTA />
           </div>
+=======
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4
         </main>
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+
+/* ==========================================================================
+   INTERNAL CORE UI EXTENSION SUB-COMPONENTS (Kept inside same file for execution clarity)
+   ========================================================================== */
+
+
+/**
+ * Clean Pagination bar tracking page state markers dynamically 
+ */
+function PaginationControls({
+  currentPage,
+  totalPages,
+}: {
+  currentPage: number;
+  totalPages: number;
+}) {
+  const createPageUrl = (pageNumber: number) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set("page", pageNumber.toString());
+    return `/books?${searchParams.toString()}`;
+  };
+
+  return (
+    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm">
+      <div className="flex flex-1 justify-between sm:hidden">
+        <Link
+          href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
+          className={`relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
+            currentPage <= 1 ? "pointer-events-none opacity-40" : ""
+          }`}
+        >
+          Previous
+        </Link>
+        <Link
+          href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
+          className={`relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
+            currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
+          }`}
+        >
+          Next
+        </Link>
+      </div>
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs text-slate-700">
+            Showing page <span className="font-semibold">{currentPage}</span> of{" "}
+            <span className="font-semibold">{totalPages}</span> pages
+          </p>
+        </div>
+        <div>
+          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            <Link
+              href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
+              className={`relative inline-flex items-center rounded-l-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
+                currentPage <= 1 ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              Previous
+            </Link>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Link
+                key={page}
+                href={createPageUrl(page)}
+                className={`relative inline-flex items-center border px-3 py-2 text-xs font-medium ${
+                  page === currentPage
+                    ? "z-10 bg-emerald-800 text-white border-emerald-800"
+                    : "bg-white border-slate-300 text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                {page}
+              </Link>
+            ))}
+            <Link
+              href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
+              className={`relative inline-flex items-center rounded-r-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
+                currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              Next
+            </Link>
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+              }
+>>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4

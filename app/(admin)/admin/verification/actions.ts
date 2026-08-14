@@ -3,9 +3,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { Resend } from "resend";
+// import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Generates a temporary 12-character alphanumeric code for the student or reseller.
@@ -47,6 +47,7 @@ export async function approveApplication(userId: string, verificationNotes: stri
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
 
     // 🎨 Upgraded Email Template: Translating Design System v1.0 into raw HTML/Inline Styles
+    /*
     await resend.emails.send({
       from: "alhikmhbookstore93@gmail.com",
       to: user.email!,
@@ -67,14 +68,12 @@ export async function approveApplication(userId: string, verificationNotes: stri
               We are pleased to inform you that your application to become verified as an Al-Hikmah <strong>${roleText}</strong> has been carefully reviewed and <strong>approved</strong>.
             </p>
 
-            <!-- Credential Box Layer using Canvas/Muted Contrast Rules -->
             <div style="background-color: #F7F4F0; padding: 24px; border-radius: 4px; margin: 24px 0; border: 1px solid #DDD8D1;">
               <h3 style="font-family: Georgia, serif; color: #6B3522; font-size: 16px; font-weight: bold; margin-top: 0; margin-bottom: 16px;">Your Access Credentials</h3>
               <p style="font-size: 14px; margin: 8px 0; color: #261E1A;"><strong>Registered Email:</strong> ${user.email}</p>
               <p style="font-size: 14px; margin: 8px 0; color: #261E1A;"><strong>Temporary Password:</strong> <code style="background-color: #F3EFE9; padding: 4px 8px; border: 1px solid #DDD8D1; border-radius: 2px; font-family: monospace; font-weight: bold; color: #6B3522;">${tempPassword}</code></p>
             </div>
 
-            <!-- Restrained Primary Button Call-to-action (Deep Clay) -->
             <div style="margin: 32px 0; text-align: left;">
               <a href="${loginUrl}" style="display: inline-block; background-color: #6B3522; color: #F7F4F0; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 14px; tracking-edge: 0.05em;">
                 Log In to Your Account
@@ -104,6 +103,7 @@ export async function approveApplication(userId: string, verificationNotes: stri
         </div>
       `,
     });
+    */
 
     revalidatePath("/admin/verification");
 
@@ -142,6 +142,7 @@ export async function rejectApplication(userId: string, reason: string) {
     const roleText = user.role === "MALAM" ? "Teacher Reseller" : "Institution";
 
     // 🎨 Upgraded Email Template: Swapping out raw Red alerts for disciplined semantic error profiles
+    /*
     await resend.emails.send({
       from: "alhikmhbookstore93@gmail.com",
       to: user.email!,
@@ -162,7 +163,6 @@ export async function rejectApplication(userId: string, reason: string) {
               Thank you for your interest in registering for the Al-Hikmah <strong>${roleText}</strong> program.
             </p>
 
-            <!-- Muted, print-style error block avoiding toxic notification tones -->
             <div style="background-color: #F7F4F0; padding: 24px; border-radius: 4px; margin: 24px 0; border: 1px solid #DDD8D1;">
               <p style="color: #9C2E26; font-size: 14px; font-weight: bold; margin-top: 0; margin-bottom: 8px;">
                 Application Status Update
@@ -195,8 +195,9 @@ export async function rejectApplication(userId: string, reason: string) {
         </div>
       `,
     });
+    */
 
-        revalidatePath("/admin/verification");
+    revalidatePath("/admin/verification");
 
     return {
       success: true,
@@ -210,4 +211,3 @@ export async function rejectApplication(userId: string, reason: string) {
     };
   }
 }
-

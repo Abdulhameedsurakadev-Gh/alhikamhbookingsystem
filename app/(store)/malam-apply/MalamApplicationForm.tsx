@@ -1,9 +1,11 @@
 // app/(store)/malam-apply/MalamApplicationForm.tsx
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useRef } from "react";
 import { submitMalamApplication } from "./actions";
-import { CheckCircle, XCircle, Loader2, Upload } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Upload, Info } from "lucide-react";
+
+const SUBJECT_OPTIONS = ["Quran", "Tajweed", "Arabic", "Fiqh", "Aqeedah", "Hadith", "Seerah"];
 
 export default function MalamApplicationForm() {
   const [isPending, startTransition] = useTransition();
@@ -13,10 +15,28 @@ export default function MalamApplicationForm() {
   } | null>(null);
   const [idFileName, setIdFileName] = useState<string>("");
   const [letterFileName, setLetterFileName] = useState<string>("");
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+
+  // Fixed: document.querySelector("form") could grab the wrong <form> if
+  // this page ever renders more than one (a search bar, for instance). A
+  // ref always points to this specific form.
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const toggleSubject = (subject: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subject) ? prev.filter((s) => s !== subject) : [...prev, subject]
+    );
+  };
 
   async function handleSubmit(formData: FormData) {
     startTransition(async () => {
       setFeedback(null);
+
+      // Fixed: matches the schema's comment ("Quran, Tajweed, Arabic") —
+      // teachingSubjects was previously a single-select, losing data for
+      // anyone teaching more than one subject.
+      formData.set("teachingSubjects", selectedSubjects.join(", "));
+
       const result = await submitMalamApplication(formData);
 
       if (result.success) {
@@ -25,13 +45,11 @@ export default function MalamApplicationForm() {
           message: result.message || "Application submitted successfully!",
         });
 
-        // Reset form
-        const form = document.querySelector("form") as HTMLFormElement;
-        form?.reset();
+        formRef.current?.reset();
         setIdFileName("");
         setLetterFileName("");
+        setSelectedSubjects([]);
 
-        // Clear feedback after 5 seconds
         setTimeout(() => setFeedback(null), 5000);
       } else {
         setFeedback({
@@ -43,110 +61,118 @@ export default function MalamApplicationForm() {
   }
 
   return (
-    <div className="bg-slate-950 p-8 rounded-xl border border-slate-800 shadow-2xl max-w-2xl mx-auto">
-      {/* Header */}
+    <div className="bg-card p-8 rounded-md border border-border max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-100">
-          Become an Al-Hikmah Malam Partner
+        <h1 className="text-heading font-bold font-serif text-foreground">
+          Apply for Al-Hikmah Malam Partnership
         </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Register as a verified teacher reseller to access wholesale pricing on Islamic books.
+        {/* Fixed: "register... to access wholesale pricing" implied
+            applying grants access automatically. Reworded so it's clear
+            this is an application for consideration, not activation. */}
+        <p className="text-sm text-muted-foreground mt-1">
+          Apply to become a verified teacher partner. Once your application is reviewed and approved, you&apos;ll gain access to partner pricing on eligible books.
         </p>
       </div>
 
-      {/* Feedback Messages */}
       {feedback && (
         <div
-          className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+          className={`mb-6 p-4 rounded-sm flex items-center gap-3 ${
             feedback.type === "success"
-              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-              : "bg-red-500/10 border border-red-500/20 text-red-400"
+              ? "bg-success/10 border border-success/20 text-success"
+              : "bg-destructive/10 border border-destructive/20 text-destructive"
           }`}
         >
           {feedback.type === "success" ? (
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <CheckCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
           ) : (
-            <XCircle className="w-5 h-5 flex-shrink-0" />
+            <XCircle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
           )}
           <p className="text-sm font-medium">{feedback.message}</p>
         </div>
       )}
 
-      <form action={handleSubmit} className="space-y-6">
-        {/* Full Name & Phone */}
+      <form ref={formRef} action={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label htmlFor="malam-name" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Full Name *
             </label>
             <input
               required
+              id="malam-name"
               type="text"
               name="fullName"
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+              disabled={isPending}
+              className="w-full bg-background border border-border rounded-sm p-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
               placeholder="e.g., Mallam Ibrahim Saibu"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label htmlFor="malam-phone" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Phone Number *
             </label>
             <input
               required
+              id="malam-phone"
               type="tel"
               name="phone"
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+              disabled={isPending}
+              className="w-full bg-background border border-border rounded-sm p-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
               placeholder="0551-234567"
             />
           </div>
         </div>
 
-        {/* Email */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          <label htmlFor="malam-email" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Email Address *
           </label>
           <input
             required
+            id="malam-email"
             type="email"
             name="email"
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+            disabled={isPending}
+            className="w-full bg-background border border-border rounded-sm p-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             placeholder="mallam@example.com"
           />
         </div>
 
-        {/* Teaching Subjects & Years */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Teaching Subjects *
+            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Teaching Subjects * <span className="normal-case font-normal">(select all that apply)</span>
             </label>
-            <select
-              required
-              name="teachingSubjects"
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
-            >
-              <option value="">Select subjects...</option>
-              <option value="Quran">Quran</option>
-              <option value="Tajweed">Tajweed</option>
-              <option value="Arabic">Arabic</option>
-              <option value="Fiqh">Fiqh</option>
-              <option value="Aqeedah">Aqeedah</option>
-              <option value="Hadith">Hadith</option>
-              <option value="Seerah">Seerah</option>
-              <option value="Multiple">Multiple Subjects</option>
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              {SUBJECT_OPTIONS.map((subject) => (
+                <label key={subject} className="flex items-center gap-2 text-xs text-foreground bg-background border border-border rounded-sm p-2 cursor-pointer hover:border-border-hover transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedSubjects.includes(subject)}
+                    onChange={() => toggleSubject(subject)}
+                    disabled={isPending}
+                    className="accent-primary h-3.5 w-3.5"
+                  />
+                  {subject}
+                </label>
+              ))}
+            </div>
+            {selectedSubjects.length === 0 && (
+              <p className="text-[10px] text-muted-foreground mt-1.5">Select at least one subject.</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label htmlFor="malam-years" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Years Teaching *
             </label>
             <select
               required
+              id="malam-years"
               name="yearsTeaching"
-              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+              disabled={isPending}
+              className="w-full bg-background border border-border rounded-sm p-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             >
               <option value="">Select experience...</option>
               <option value="Less than 1yr">Less than 1 year</option>
@@ -157,99 +183,101 @@ export default function MalamApplicationForm() {
           </div>
         </div>
 
-        {/* Madrasah Name */}
         <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          <label htmlFor="malam-madrasah" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Madrasah / School Name *
           </label>
           <input
             required
+            id="malam-madrasah"
             type="text"
             name="madrasahName"
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+            disabled={isPending}
+            className="w-full bg-background border border-border rounded-sm p-3 text-sm text-foreground focus:outline-none focus:border-primary transition-colors duration-fast disabled:opacity-50"
             placeholder="e.g., Dar Al-Sunnah Madrasah"
           />
         </div>
 
-        {/* File Uploads */}
-        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800/80 space-y-4">
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+        <div className="bg-background p-4 rounded-md border border-border space-y-4">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
             Required Documents
           </h3>
 
-          {/* National ID Upload */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label htmlFor="malam-id" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Upload National ID (JPG, PNG, or PDF) *
             </label>
             <label className="w-full">
               <input
                 required
+                id="malam-id"
                 type="file"
                 name="idProof"
                 accept=".jpg,.jpeg,.png,.pdf"
+                disabled={isPending}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   setIdFileName(file?.name || "");
                 }}
                 className="hidden"
               />
-              <div className="flex items-center justify-center gap-2 w-full bg-slate-900 border-2 border-dashed border-slate-700 rounded-lg p-6 cursor-pointer hover:border-emerald-500 transition-colors">
-                <Upload className="w-5 h-5 text-slate-400" />
+              <div className="flex items-center justify-center gap-2 w-full bg-card border-2 border-dashed border-border rounded-sm p-6 cursor-pointer hover:border-primary transition-colors duration-fast">
+                <Upload className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-200">
+                  <p className="text-sm font-semibold text-foreground">
                     {idFileName || "Click to upload National ID"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Max 5MB • JPG, PNG, or PDF</p>
+                  <p className="text-xs text-muted-foreground mt-1">Max 5MB • JPG, PNG, or PDF</p>
                 </div>
               </div>
             </label>
           </div>
 
-          {/* Madrasah Letter Upload */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+            <label htmlFor="malam-letter" className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Upload Madrasah Letter (JPG, PNG, or PDF) *
             </label>
             <label className="w-full">
               <input
                 required
+                id="malam-letter"
                 type="file"
                 name="letter"
                 accept=".jpg,.jpeg,.png,.pdf"
+                disabled={isPending}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   setLetterFileName(file?.name || "");
                 }}
                 className="hidden"
               />
-              <div className="flex items-center justify-center gap-2 w-full bg-slate-900 border-2 border-dashed border-slate-700 rounded-lg p-6 cursor-pointer hover:border-emerald-500 transition-colors">
-                <Upload className="w-5 h-5 text-slate-400" />
+              <div className="flex items-center justify-center gap-2 w-full bg-card border-2 border-dashed border-border rounded-sm p-6 cursor-pointer hover:border-primary transition-colors duration-fast">
+                <Upload className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-200">
+                  <p className="text-sm font-semibold text-foreground">
                     {letterFileName || "Click to upload Madrasah Letter"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">Max 5MB • JPG, PNG, or PDF</p>
+                  <p className="text-xs text-muted-foreground mt-1">Max 5MB • JPG, PNG, or PDF</p>
                 </div>
               </div>
             </label>
           </div>
 
-          <p className="text-xs text-slate-400 mt-4">
-            ℹ️ Letter should be on school letterhead confirming you teach there.
+          <p className="text-xs text-muted-foreground mt-4 flex items-start gap-1.5">
+            <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            Letter should be on school letterhead confirming you teach there.
           </p>
         </div>
 
-        {/* Submit Button */}
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-4 border-t border-border">
           <button
             type="submit"
-            disabled={isPending}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+            disabled={isPending || selectedSubjects.length === 0}
+            className="w-full bg-primary hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground font-semibold py-3 px-6 rounded-sm transition-colors duration-fast ease-standard flex items-center justify-center gap-2"
           >
             {isPending ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 Submitting Application...
               </>
             ) : (
@@ -258,8 +286,12 @@ export default function MalamApplicationForm() {
           </button>
         </div>
 
-        <p className="text-xs text-slate-400 text-center">
-          We'll review your application within 24-48 hours. You'll receive an email once verified.
+        {/* TODO: confirm an actual email notification is wired up for this
+            flow before shipping this line — a promised email that never
+            sends is the same category of trust issue as any other
+            overclaim in the copy. */}
+        <p className="text-xs text-muted-foreground text-center">
+          We&apos;ll review your application within 24-48 hours and follow up with a decision.
         </p>
       </form>
     </div>

@@ -248,8 +248,4 @@ export default function AboutPage(): React.JSX.Element {
 
     </main>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 9b14642dd4135726f38d02fdfe4e9aefa1327cd4

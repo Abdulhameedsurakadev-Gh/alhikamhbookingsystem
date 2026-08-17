@@ -43,6 +43,9 @@ export default function AdminLayout({
     { href: "/admin/paystack-orders", label: "Paystack Orders", icon: ShoppingBag, disabled: false },
     { href: "/admin/registered-buyers", label: "Registered Buyers", icon: Users, disabled: false },
     { href: "/admin/verification", label: "School and Madrasah verification", icon: Users, disabled: false },
+
+    // NEW
+    { href: "/admin/malam-applications", label: "Malam Applications", icon: Users, disabled: false },
   ];
 
   // Reusable Navigation Link Component Block

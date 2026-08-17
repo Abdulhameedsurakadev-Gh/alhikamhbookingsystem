@@ -253,7 +253,7 @@ export default async function MalamApplicationReviewPage({
             Approve or reject this Malam partner application.
           </p>
         </div>
-
+{/*
         <form action={auditMalamApplication.bind(null, application.id)} className="space-y-5 p-6">
           <div>
             <label
@@ -292,7 +292,10 @@ export default async function MalamApplicationReviewPage({
             </button>
           </div>
         </form>
+        */}
       </section>
     </main>
   );
-}
+} 
+
+   

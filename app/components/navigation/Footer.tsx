@@ -133,7 +133,8 @@ export function Footer() {
               <li><Link href="/about" className="hover:text-primary-hover transition-colors block">About</Link></li>
               <li><Link href="/contact" className="hover:text-primary-hover transition-colors block">Contact</Link></li>
               <li><Link href="/shipping" className="hover:text-primary-hover transition-colors block">Shipping in Ghana</Link></li>
-              <li><Link href="/privacy" className="hover:text-primary-hover transition-colors block">Privacy & Terms</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary-hover transition-colors block">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-primary-hover transition-colors block">Terms & Conditions</Link></li>
             </ul>
           </div>
 

@@ -1,11 +1,22 @@
 // app/(store)/books/page.tsx
+
 import Link from "next/link";
 import { prisma } from "../../../lib/prisma";
 import { FilterSidebar } from "./FilterSidebar";
-import { KnowledgeLevel, TextType, CoverType, VolumeType } from "@prisma/client";
-import { Search, X, BookOpen, Star, Sparkles } from "lucide-react";
+import {
+  KnowledgeLevel,
+  TextType,
+  CoverType,
+  VolumeType,
+} from "@prisma/client";
+import {
+  Search,
+  X,
+  BookOpen,
+  Star,
+  Sparkles,
+} from "lucide-react";
 import { SortDropdown } from "./SortDropdown";
-
 
 interface SearchParams {
   search?: string;
@@ -24,116 +35,275 @@ export default async function BooksPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+
   const search = params.search || "";
   const categorySlug = params.category || "";
   const level = params.level as KnowledgeLevel | undefined;
   const textType = params.textType as TextType | undefined;
   const coverType = params.coverType as CoverType | undefined;
   const volumeType = params.volumeType as VolumeType | undefined;
-  
-  // Sorting Configuration
+
   const sort = params.sort || "newest";
 
-  // Pagination Configuration 
-  const BOOKS_PER_PAGE = 12; // Standard view limit per load batch
+  const BOOKS_PER_PAGE = 12;
   const currentPage = Math.max(1, parseInt(params.page || "1", 10));
   const skip = (currentPage - 1) * BOOKS_PER_PAGE;
 
-  // 1. Build Unified Prisma Dynamic Conditions Object
+  // ---------------------------------------------------------------------------
+  // DATABASE FILTERS
+  // ---------------------------------------------------------------------------
+
   const whereClause: any = {};
+
   if (search) {
     whereClause.OR = [
-      { title: { contains: search, mode: "insensitive" } },
-      { author: { name: { contains: search, mode: "insensitive" } } },
-      { isbn: { contains: search, mode: "insensitive" } },
-      { publisher: { contains: search, mode: "insensitive" } },
+      {
+        title: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        author: {
+          name: {
+            contains: search,
+            mode: "insensitive",
+          },
+        },
+      },
+      {
+        isbn: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
+      {
+        publisher: {
+          contains: search,
+          mode: "insensitive",
+        },
+      },
     ];
   }
-  if (categorySlug) whereClause.category = { slug: categorySlug };
-  if (level) whereClause.knowledgeLevel = level;
-  if (textType) whereClause.textType = textType;
-  if (coverType) whereClause.coverType = coverType;
-  if (volumeType) whereClause.volumeType = volumeType;
 
-  // 2. Build Unified Prisma Dynamic Sorting Array Block
-  let orderByClause: any = { createdAt: "desc" }; // default fallback
-  if (sort === "price-asc") orderByClause = { price: "asc" };
-  if (sort === "price-desc") orderByClause = { price: "desc" };
-  if (sort === "title-az") orderByClause = { title: "asc" };
-  if (sort === "title-za") orderByClause = { title: "desc" };
+  if (categorySlug) {
+    whereClause.category = {
+      slug: categorySlug,
+    };
+  }
 
-  // 3. Execute DB Operations (Running parallel queries for high processing velocity)
-  const [allBooks, totalFilteredCount, totalStoreCount, categories] = await Promise.all([
+  if (level) {
+    whereClause.knowledgeLevel = level;
+  }
+
+  if (textType) {
+    whereClause.textType = textType;
+  }
+
+  if (coverType) {
+    whereClause.coverType = coverType;
+  }
+
+  if (volumeType) {
+    whereClause.volumeType = volumeType;
+  }
+
+  // ---------------------------------------------------------------------------
+  // SORTING
+  // ---------------------------------------------------------------------------
+
+  let orderByClause: any = {
+    createdAt: "desc",
+  };
+
+  if (sort === "price-asc") {
+    orderByClause = {
+      price: "asc",
+    };
+  }
+
+  if (sort === "price-desc") {
+    orderByClause = {
+      price: "desc",
+    };
+  }
+
+  if (sort === "title-az") {
+    orderByClause = {
+      title: "asc",
+    };
+  }
+
+  if (sort === "title-za") {
+    orderByClause = {
+      title: "desc",
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // DATABASE QUERIES
+  // ---------------------------------------------------------------------------
+
+  const [
+    allBooks,
+    totalFilteredCount,
+    totalStoreCount,
+    categories,
+  ] = await Promise.all([
     prisma.book.findMany({
       where: whereClause,
-      include: { author: true, category: true, explanations: true },
+      include: {
+        author: true,
+        category: true,
+        explanations: true,
+      },
       orderBy: orderByClause,
-      take: currentPage * BOOKS_PER_PAGE, // Pulls cumulative counts to support "Load More" appends smoothly
+      take: currentPage * BOOKS_PER_PAGE,
     }),
-    prisma.book.count({ where: whereClause }), // Filtered criteria count
-    prisma.book.count(), // absolute catalog maximum limit
-    prisma.category.findMany({ where: { parentId: null }, orderBy: { name: "asc" } })
+
+    prisma.book.count({
+      where: whereClause,
+    }),
+
+    prisma.book.count(),
+
+    prisma.category.findMany({
+      where: {
+        parentId: null,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    }),
   ]);
 
-  // Fetch contextual carousels only when no active filter constraints are present
-  const hasActiveFilters = search || categorySlug || level || textType || coverType || volumeType;
-  
+  // ---------------------------------------------------------------------------
+  // DISCOVERY SECTIONS
+  // ---------------------------------------------------------------------------
+
+  const hasActiveFilters =
+    search ||
+    categorySlug ||
+    level ||
+    textType ||
+    coverType ||
+    volumeType;
+
   const newArrivals = !hasActiveFilters
-    ? await prisma.book.findMany({ take: 5, orderBy: { createdAt: "desc" }, include: { author: true, category: true } })
+    ? await prisma.book.findMany({
+        take: 5,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          author: true,
+          category: true,
+        },
+      })
     : [];
 
   const beginnerFriendly = !hasActiveFilters
-    ? await prisma.book.findMany({ where: { knowledgeLevel: "MUBTADI" }, take: 5, include: { author: true, category: true } })
+    ? await prisma.book.findMany({
+        where: {
+          knowledgeLevel: "MUBTADI",
+        },
+        take: 5,
+        include: {
+          author: true,
+          category: true,
+        },
+      })
     : [];
 
-  // Helper url modifier path assembly logic
+  // ---------------------------------------------------------------------------
+  // FILTER URL HELPERS
+  // ---------------------------------------------------------------------------
+
   const getRemoveFilterUrl = (keyToDelete: string) => {
-    const activeKeys = { ...params };
+    const activeKeys = {
+      ...params,
+    };
+
     delete (activeKeys as any)[keyToDelete];
+
     const searchParams = new URLSearchParams();
+
     Object.entries(activeKeys).forEach(([key, val]) => {
-      if (val) searchParams.set(key, val);
+      if (val) {
+        searchParams.set(key, val);
+      }
     });
-    return `/books?${searchParams.toString()}`;
+
+    const query = searchParams.toString();
+
+    return query ? `/books?${query}` : "/books";
   };
 
   const hasNextPage = totalFilteredCount > allBooks.length;
 
+  // ---------------------------------------------------------------------------
+  // PAGE
+  // ---------------------------------------------------------------------------
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-1 sm:px-0 pb-16">
-      
-      {/* Search Header Banner */}
-      <div className="sticky top-0 z-30 bg-slate-50 py-2.5 lg:static lg:bg-transparent lg:py-0">
-        <form action="/books" method="GET" className="relative w-full shadow-sm lg:shadow-none">
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-3 pb-16 sm:px-4 lg:px-0">
+      {/* ---------------------------------------------------------------------
+          SEARCH
+      --------------------------------------------------------------------- */}
+
+      <div className="sticky top-0 z-30 bg-background py-2.5 lg:static lg:bg-transparent lg:py-0">
+        <form
+          action="/books"
+          method="GET"
+          className="relative w-full"
+        >
           <input
             type="text"
             name="search"
             defaultValue={search}
             placeholder="Search book titles, scholars, keywords, ISBN barcodes..."
-            className="w-full bg-white text-slate-900 pl-11 pr-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-700 text-sm transition shadow-sm"
+            className="w-full rounded-md border border-border bg-background py-3 pl-11 pr-4 text-sm text-foreground shadow-sm transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
           />
-          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
-          {sort && <input type="hidden" name="sort" value={sort} />}
+
+          <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground" />
+
+          {sort && (
+            <input
+              type="hidden"
+              name="sort"
+              value={sort}
+            />
+          )}
         </form>
       </div>
 
-      {/* Quick Topic Chips */}
-      <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0">
-        <div className="flex gap-2 whitespace-nowrap py-1">
+      {/* ---------------------------------------------------------------------
+          QUICK TOPICS
+      --------------------------------------------------------------------- */}
+
+      <div className="w-full overflow-x-auto scrollbar-none">
+        <div className="flex min-w-max gap-2 py-1">
           <Link
             href="/books"
-            className={`inline-block px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-              !categorySlug ? "bg-emerald-800 text-amber-100" : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-600"
+            className={`inline-block rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              !categorySlug
+                ? "bg-primary text-primary-foreground"
+                : "border border-border bg-card text-muted-foreground hover:border-primary hover:text-foreground"
             }`}
           >
             All Subjects
           </Link>
+
           {categories.map((cat) => (
             <Link
               key={cat.id}
-              href={`/books?category=${cat.slug}${sort ? `&sort=${sort}` : ""}`}
-              className={`inline-block px-4 py-1.5 text-xs font-semibold rounded-full transition ${
-                categorySlug === cat.slug ? "bg-emerald-800 text-amber-100" : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-600"
+              href={`/books?category=${cat.slug}${
+                sort ? `&sort=${sort}` : ""
+              }`}
+              className={`inline-block rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+                categorySlug === cat.slug
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border bg-card text-muted-foreground hover:border-primary hover:text-foreground"
               }`}
             >
               {cat.name}
@@ -142,74 +312,162 @@ export default async function BooksPage({
         </div>
       </div>
 
-      {/* Pre-Catalog Discovery Sections */}
+      {/* ---------------------------------------------------------------------
+          DISCOVERY SECTIONS
+      --------------------------------------------------------------------- */}
+
       {!hasActiveFilters && (
         <div className="space-y-8">
-          <section className="bg-gradient-to-br from-emerald-900 via-emerald-950 to-slate-950 text-white rounded-2xl p-5 shadow-md border border-emerald-800">
+          {/* Study Level */}
+
+          <section className="rounded-md border border-border bg-card p-5 shadow-sm">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-amber-300" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-amber-200">Start Learning By Study Level</h2>
+              <BookOpen className="h-4 w-4 text-primary" />
+
+              <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
+                Start Learning By Study Level
+              </h2>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <Link href={`/books?level=MUBTADI${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Beginner <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mubtadi</span>
+
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <Link
+                href={`/books?level=MUBTADI${
+                  sort ? `&sort=${sort}` : ""
+                }`}
+                className="rounded-md border border-border bg-background p-3 text-center text-xs font-bold text-foreground transition hover:border-primary hover:bg-muted"
+              >
+                Beginner
+
+                <span className="mt-0.5 block text-[9px] font-normal text-muted-foreground">
+                  Mubtadi
+                </span>
               </Link>
-              <Link href={`/books?level=MUTAWASSIT${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Intermediate <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mutawassit</span>
+
+              <Link
+                href={`/books?level=MUTAWASSIT${
+                  sort ? `&sort=${sort}` : ""
+                }`}
+                className="rounded-md border border-border bg-background p-3 text-center text-xs font-bold text-foreground transition hover:border-primary hover:bg-muted"
+              >
+                Intermediate
+
+                <span className="mt-0.5 block text-[9px] font-normal text-muted-foreground">
+                  Mutawassit
+                </span>
               </Link>
-              <Link href={`/books?level=MUTAQADDIM${sort ? `&sort=${sort}` : ""}`} className="bg-white/10 hover:bg-white/15 text-center p-2 rounded-xl text-xs font-bold transition border border-white/5 shadow-sm">
-                Advanced <span className="block text-[9px] font-normal text-emerald-300 font-mono mt-0.5">Mutaqaddim</span>
+
+              <Link
+                href={`/books?level=MUTAQADDIM${
+                  sort ? `&sort=${sort}` : ""
+                }`}
+                className="rounded-md border border-border bg-background p-3 text-center text-xs font-bold text-foreground transition hover:border-primary hover:bg-muted"
+              >
+                Advanced
+
+                <span className="mt-0.5 block text-[9px] font-normal text-muted-foreground">
+                  Mutaqaddim
+                </span>
               </Link>
             </div>
           </section>
 
+          {/* New Arrivals */}
+
           {newArrivals.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <h3 className="font-serif font-bold text-lg text-slate-900">New Arrivals</h3>
+                <Sparkles className="h-4 w-4 text-primary" />
+
+                <h3 className="font-serif text-lg font-bold text-foreground">
+                  New Arrivals
+                </h3>
               </div>
-              <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
+
+              <div className="flex w-full gap-4 overflow-x-auto pb-2 scrollbar-none">
                 {newArrivals.map((book) => (
-                  <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
-                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+                  <Link
+                    key={book.id}
+                    href={`/books/${book.id}`}
+                    className="flex w-40 shrink-0 flex-col justify-between rounded-md border border-border bg-card p-3 shadow-sm transition hover:border-primary"
+                  >
+                    <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted">
                       {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
+                        <img
+                          src={book.coverImage}
+                          alt={book.title}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
-                        <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
+                        <span className="px-2 text-center font-serif text-[9px] text-muted-foreground line-clamp-3">
+                          {book.title}
+                        </span>
                       )}
                     </div>
-                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
-                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
-                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+
+                    <div className="mt-2 flex flex-1 flex-col justify-end space-y-0.5">
+                      <h4 className="font-serif text-xs font-bold text-foreground line-clamp-1">
+                        {book.title}
+                      </h4>
+
+                      <p className="truncate text-[10px] text-muted-foreground">
+                        By {book.author.name}
+                      </p>
+
+                      <p className="pt-1 text-xs font-extrabold text-primary">
+                        GH₵ {Number(book.price).toFixed(2)}
+                      </p>
                     </div>
                   </Link>
                 ))}
               </div>
             </section>
           )}
+
+          {/* Beginner Friendly */}
 
           {beginnerFriendly.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center gap-1.5 px-1">
-                <Star className="h-4 w-4 text-amber-500" />
-                <h3 className="font-serif font-bold text-lg text-slate-900">Beginner Friendly Mutoon</h3>
+                <Star className="h-4 w-4 text-primary" />
+
+                <h3 className="font-serif text-lg font-bold text-foreground">
+                  Beginner Friendly Mutoon
+                </h3>
               </div>
-              <div className="w-full overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 flex gap-4 pb-2">
+
+              <div className="flex w-full gap-4 overflow-x-auto pb-2 scrollbar-none">
                 {beginnerFriendly.map((book) => (
-                                    <Link key={book.id} href={`/books/${book.id}`} className="w-40 flex-shrink-0 bg-white border border-slate-100 rounded-xl p-3 shadow-sm hover:border-emerald-600 transition flex flex-col justify-between">
-                    <div className="h-36 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
+                  <Link
+                    key={book.id}
+                    href={`/books/${book.id}`}
+                    className="flex w-40 shrink-0 flex-col justify-between rounded-md border border-border bg-card p-3 shadow-sm transition hover:border-primary"
+                  >
+                    <div className="relative flex h-36 items-center justify-center overflow-hidden rounded-md bg-muted">
                       {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover" />
+                        <img
+                          src={book.coverImage}
+                          alt={book.title}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
-                        <span className="text-[9px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
+                        <span className="px-2 text-center font-serif text-[9px] text-muted-foreground line-clamp-3">
+                          {book.title}
+                        </span>
                       )}
                     </div>
-                    <div className="mt-2 space-y-0.5 flex-1 flex flex-col justify-end">
-                      <h4 className="font-serif text-xs font-bold text-slate-900 line-clamp-1">{book.title}</h4>
-                      <p className="text-[10px] text-slate-500 truncate">By {book.author.name}</p>
-                      <p className="text-xs font-extrabold text-emerald-800 pt-1">GH₵ {Number(book.price).toFixed(2)}</p>
+
+                    <div className="mt-2 flex flex-1 flex-col justify-end space-y-0.5">
+                      <h4 className="font-serif text-xs font-bold text-foreground line-clamp-1">
+                        {book.title}
+                      </h4>
+
+                      <p className="truncate text-[10px] text-muted-foreground">
+                        By {book.author.name}
+                      </p>
+
+                      <p className="pt-1 text-xs font-extrabold text-primary">
+                        GH₵ {Number(book.price).toFixed(2)}
+                      </p>
                     </div>
                   </Link>
                 ))}
@@ -219,144 +477,217 @@ export default async function BooksPage({
         </div>
       )}
 
-      {/* Active Filters Tag Close Chips Panel */}
+      {/* ---------------------------------------------------------------------
+          ACTIVE FILTERS
+      --------------------------------------------------------------------- */}
+
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-600 px-1 pt-2">
-          <span className="font-semibold mr-1">Active Criteria:</span>
+        <div className="flex flex-wrap items-center gap-1.5 px-1 pt-2 text-xs text-muted-foreground">
+          <span className="mr-1 font-semibold text-foreground">
+            Active Criteria:
+          </span>
+
           {search && (
-            <Link href={getRemoveFilterUrl("search")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              &quot;{search}&quot; <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("search")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              &quot;{search}&quot;
+              <X className="h-3 w-3" />
             </Link>
           )}
+
           {categorySlug && (
-            <Link href={getRemoveFilterUrl("category")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Subject: {categorySlug} <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("category")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              Subject: {categorySlug}
+              <X className="h-3 w-3" />
             </Link>
           )}
+
           {level && (
-            <Link href={getRemoveFilterUrl("level")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Level: {level} <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("level")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              Level: {level}
+              <X className="h-3 w-3" />
             </Link>
           )}
+
           {textType && (
-            <Link href={getRemoveFilterUrl("textType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Type: {textType} <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("textType")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              Type: {textType}
+              <X className="h-3 w-3" />
             </Link>
           )}
+
           {volumeType && (
-            <Link href={getRemoveFilterUrl("volumeType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Volume: {volumeType} <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("volumeType")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              Volume: {volumeType}
+              <X className="h-3 w-3" />
             </Link>
           )}
+
           {coverType && (
-            <Link href={getRemoveFilterUrl("coverType")} className="inline-flex items-center gap-1 bg-slate-100 border text-slate-700 px-2.5 py-1 rounded-full hover:bg-rose-50 hover:text-rose-700 transition">
-              Binding: {coverType} <X className="h-3 w-3" />
+            <Link
+              href={getRemoveFilterUrl("coverType")}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-muted-foreground transition hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              Binding: {coverType}
+              <X className="h-3 w-3" />
             </Link>
           )}
         </div>
       )}
 
-      {/* Combined Responsive Filtering Panel Layout Grid Wrapper */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start pt-2">
-        <aside className="lg:col-span-1">
-          <FilterSidebar categories={categories} activeFilters={params} />
+      {/* ---------------------------------------------------------------------
+          CATALOG
+      --------------------------------------------------------------------- */}
+
+      <div className="grid grid-cols-1 items-start gap-6 pt-2 lg:grid-cols-4">
+        <aside className="min-w-0 lg:col-span-1">
+          <FilterSidebar
+            categories={categories}
+            activeFilters={params}
+          />
         </aside>
 
-        <main className="lg:col-span-3 space-y-4">
-          
-          {/* Catalog Controls: Statistics Indicator & Sorting Action Dropdown Selector */}
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3 px-1">
-            
-            {/* Catalog Statistics (Feature 11) */}
-            <div className="text-xs text-slate-500 font-medium">
+        <main className="min-w-0 space-y-4 lg:col-span-3">
+          {/* Catalog controls */}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-1 pb-3">
+            <div className="text-xs font-medium text-muted-foreground">
               {totalFilteredCount === 0 ? (
                 <span>0 Books Found</span>
               ) : (
                 <span>
-                  Showing{" "} <span className="font-semibold text-slate-800">{allBooks.length}</span>{" "} of {""} 
-                  <span className="font-semibold text-slate-800">{totalFilteredCount}</span>{" "} Books
+                  Showing{" "}
+                  <span className="font-semibold text-foreground">
+                    {allBooks.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-foreground">
+                    {totalFilteredCount}
+                  </span>{" "}
+                  Books
                 </span>
               )}
             </div>
 
-            {/* Sorting Interactive Control (Feature 6) */}
             <SortDropdown currentSort={sort} />
           </div>
 
+          {/* Empty state */}
+
           {allBooks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center mx-1">
-              <p className="text-sm text-slate-500 font-medium">No books match your specific filters.</p>
-              <Link href="/books" className="text-xs text-emerald-700 font-semibold underline mt-2 inline-block">
+            <div className="mx-1 rounded-md border border-dashed border-border bg-card p-12 text-center">
+              <p className="text-sm font-medium text-muted-foreground">
+                No books match your specific filters.
+              </p>
+
+              <Link
+                href="/books"
+                className="mt-2 inline-block text-xs font-semibold text-primary underline underline-offset-2"
+              >
                 Reset All Search Filters
               </Link>
             </div>
           ) : (
-            <div>
-              {/* Layout transformation: Single structural rows on smaller breakpoints, three-tier grid slots on desktop */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {allBooks.map((book) => (
-                  <div key={book.id} className="flex flex-row lg:flex-col bg-white border border-slate-200 rounded-xl p-3 lg:p-4 shadow-sm hover:shadow-md transition gap-4 group relative">
-                    
-                    {/* Imagery Canvas Node */}
-                    <div className="w-24 h-32 flex-shrink-0 lg:w-full lg:h-52 bg-slate-50 rounded-lg flex items-center justify-center overflow-hidden relative">
-                      {book.coverImage ? (
-                        <img src={book.coverImage} alt={book.title} className="h-full w-full object-cover group-hover:scale-102 transition duration-300" />
-                      ) : (
-                        <span className="text-[10px] text-slate-400 font-serif px-2 text-center line-clamp-3">{book.title}</span>
-                      )}
-                      
-                      {/* Top Corner Structural Text Class Indicator Label Tag */}
-                      <span className="absolute top-1.5 right-1.5 bg-emerald-800 text-amber-100 font-mono text-[9px] uppercase font-bold px-1.5 py-0.5 rounded shadow">
-                        {book.textType}
+            <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {allBooks.map((book) => (
+                <div
+                  key={book.id}
+                  className="group relative flex min-w-0 flex-row gap-3 rounded-md border border-border bg-card p-3 shadow-sm transition hover:shadow-md sm:gap-4 lg:flex-col lg:p-4"
+                >
+                  {/* Cover */}
+
+                  <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-md bg-muted sm:h-36 sm:w-28 lg:h-52 lg:w-full">
+                    {book.coverImage ? (
+                      <img
+                        src={book.coverImage}
+                        alt={book.title}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center px-2 text-center font-serif text-[10px] text-muted-foreground line-clamp-3">
+                        {book.title}
                       </span>
-                    </div>
+                    )}
 
-                    {/* Operational Information Columns */}
-                    <div className="flex-1 flex flex-col justify-between lg:justify-start lg:space-y-1">
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide block">
-                          {book.category.name} • {book.knowledgeLevel}
-                        </span>
-                        <h4 className="font-serif font-bold text-sm lg:text-base text-slate-900 group-hover:text-emerald-800 transition line-clamp-2 mt-0.5">
-                          {book.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 italic mt-0.5 truncate">
-                          By {book.author.name} {book.author.nameArabic ? `(${book.author.nameArabic})` : ""}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 mt-2 border-t lg:border-none border-slate-100">
-                        <span className="text-sm lg:text-base font-bold text-slate-900">
-                          GH₵ {Number(book.price).toFixed(2)}
-                        </span>
-                        <Link
-                          href={`/books/${book.id}`}
-                          className="bg-slate-100 hover:bg-emerald-700 hover:text-white text-slate-700 font-semibold px-3 py-1.5 rounded-md text-xs transition"
-                        >
-                          View Book
-                        </Link>
-                      </div>
-                    </div>
-
+                    <span className="absolute right-1.5 top-1.5 rounded bg-primary px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase text-primary-foreground shadow">
+                      {book.textType}
+                    </span>
                   </div>
-                ))}
-              </div>
-              </div>
+
+                  {/* Book information */}
+
+                  <div className="flex min-w-0 flex-1 flex-col justify-between lg:justify-start lg:space-y-1">
+                    <div className="min-w-0">
+                      <span className="block text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                        {book.category.name} • {book.knowledgeLevel}
+                      </span>
+
+                      <h4 className="mt-0.5 font-serif text-sm font-bold text-foreground line-clamp-2 transition group-hover:text-primary lg:text-base">
+                        {book.title}
+                      </h4>
+
+                      <p className="mt-0.5 truncate text-xs italic text-muted-foreground">
+                        By {book.author.name}{" "}
+                        {book.author.nameArabic
+                          ? `(${book.author.nameArabic})`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <div className="mt-2 flex min-w-0 items-center justify-between gap-2 border-t border-border pt-2 lg:mt-3 lg:border-none lg:pt-0">
+                      <span className="shrink-0 text-sm font-bold text-foreground lg:text-base">
+                        GH₵ {Number(book.price).toFixed(2)}
+                      </span>
+
+                      <Link
+                        href={`/books/${book.id}`}
+                        className="shrink-0 rounded-md bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-primary hover:text-primary-foreground"
+                      >
+                        View Book
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-          
-          {/* "Load More" Append Control Element (Feature 7) */}
+
+          {/* Load more */}
+
           {allBooks.length < totalFilteredCount && (
             <div className="flex justify-center pt-6">
               <Link
                 href={`/books?${(() => {
                   const nextParams = new URLSearchParams();
+
                   Object.entries(params).forEach(([key, val]) => {
-                    if (val && key !== "page") nextParams.set(key, val);
+                    if (val && key !== "page") {
+                      nextParams.set(key, val);
+                    }
                   });
-                  nextParams.set("page", (currentPage + 1).toString());
+
+                  nextParams.set(
+                    "page",
+                    (currentPage + 1).toString()
+                  );
+
                   return nextParams.toString();
                 })()}`}
-                className="inline-flex items-center justify-center rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs px-6 py-3 shadow transition cursor-pointer"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary-hover"
               >
                 Load More Books
               </Link>
@@ -367,89 +698,3 @@ export default async function BooksPage({
     </div>
   );
 }
-
-/* ==========================================================================
-   INTERNAL CORE UI EXTENSION SUB-COMPONENTS (Kept inside same file for execution clarity)
-   ========================================================================== */
-
-
-/**
- * Clean Pagination bar tracking page state markers dynamically 
- */
-function PaginationControls({
-  currentPage,
-  totalPages,
-}: {
-  currentPage: number;
-  totalPages: number;
-}) {
-  const createPageUrl = (pageNumber: number) => {
-    const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set("page", pageNumber.toString());
-    return `/books?${searchParams.toString()}`;
-  };
-
-  return (
-    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-3 sm:px-6 rounded-xl shadow-sm">
-      <div className="flex flex-1 justify-between sm:hidden">
-        <Link
-          href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
-          className={`relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
-            currentPage <= 1 ? "pointer-events-none opacity-40" : ""
-          }`}
-        >
-          Previous
-        </Link>
-        <Link
-          href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
-          className={`relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 ${
-            currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
-          }`}
-        >
-          Next
-        </Link>
-      </div>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs text-slate-700">
-            Showing page <span className="font-semibold">{currentPage}</span> of{" "}
-            <span className="font-semibold">{totalPages}</span> pages
-          </p>
-        </div>
-        <div>
-          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-            <Link
-              href={currentPage > 1 ? createPageUrl(currentPage - 1) : "#"}
-              className={`relative inline-flex items-center rounded-l-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
-                currentPage <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              Previous
-            </Link>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Link
-                key={page}
-                href={createPageUrl(page)}
-                className={`relative inline-flex items-center border px-3 py-2 text-xs font-medium ${
-                  page === currentPage
-                    ? "z-10 bg-emerald-800 text-white border-emerald-800"
-                    : "bg-white border-slate-300 text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                {page}
-              </Link>
-            ))}
-            <Link
-              href={currentPage < totalPages ? createPageUrl(currentPage + 1) : "#"}
-              className={`relative inline-flex items-center rounded-r-md border border-slate-300 bg-white px-2 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 ${
-                currentPage >= totalPages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              Next
-            </Link>
-          </nav>
-        </div>
-      </div>
-    </div>
-  );
-              }

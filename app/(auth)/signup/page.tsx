@@ -63,7 +63,7 @@ export default function SignupPage() {
 
       // Merge BEFORE clearing — correct order, kept exactly as-is.
       if (data?.user?.id && mappedGuestCart.length > 0) {
-        await mergeGuestCartToDatabase(data.user.id, mappedGuestCart);
+        await mergeGuestCartToDatabase(mappedGuestCart);
       }
 
       clearGuestCart();

@@ -42,7 +42,7 @@ export default function LoginPage() {
 
       // Merge BEFORE clearing — correct order, keeps this intact exactly as-is.
       if (data?.user?.id && mappedGuestCart.length > 0) {
-        await mergeGuestCartToDatabase(data.user.id, mappedGuestCart);
+        await mergeGuestCartToDatabase(mappedGuestCart);
       }
 
       clearGuestCart();

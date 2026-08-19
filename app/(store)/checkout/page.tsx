@@ -7,10 +7,8 @@ import { auth } from "../../../lib/auth";
 import { CheckoutForm } from "./CheckoutForm";
 import { ShieldCheck, ArrowLeft } from "lucide-react";
 
-// Correctly needed here, unlike the Cart page — this route does real
-// server-side work (session check + redirect + a fresh Prisma cart query)
-// that must never be served stale. A cached checkout page could show an
-// old cart or miss a redirect for a logged-out visitor.
+// Checkout performs server-side session and cart validation,
+// so it must always be evaluated dynamically.
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage(): Promise<React.JSX.Element> {
@@ -18,21 +16,26 @@ export default async function CheckoutPage(): Promise<React.JSX.Element> {
     headers: await headers(),
   });
 
+  // Checkout requires an authenticated customer.
   if (!session || !session.user) {
     redirect("/login?redirect=checkout");
   }
 
+  // Fetch the authenticated user's persistent database cart.
   const cart = await prisma.cart.findUnique({
-    where: { userId: session.user.id },
+    where: {
+      userId: session.user.id,
+    },
     include: {
       items: {
         include: {
-          book: true
-        }
+          book: true,
+        },
       },
     },
   });
 
+  // A customer cannot proceed to checkout with an empty cart.
   if (!cart || cart.items.length === 0) {
     redirect("/cart");
   }
@@ -51,16 +54,25 @@ export default async function CheckoutPage(): Promise<React.JSX.Element> {
           <h1 className="font-serif text-heading font-extrabold text-foreground tracking-tight">
             Checkout
           </h1>
+
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Secure
-            payment powered by Paystack
+            <ShieldCheck
+              className="h-3.5 w-3.5 text-primary"
+              aria-hidden="true"
+            />
+            Secure payment powered by Paystack
           </p>
         </div>
+
         <Link
           href="/cart"
           className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-primary-hover transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Return to Cart
+          <ArrowLeft
+            className="h-3.5 w-3.5"
+            aria-hidden="true"
+          />
+          Return to Cart
         </Link>
       </div>
 

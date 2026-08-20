@@ -1,5 +1,3 @@
-
-// app/(store)/cart/actions.ts
 "use server";
 
 import { headers } from "next/headers";
@@ -8,11 +6,11 @@ import { prisma } from "../../../lib/prisma";
 import { auth } from "../../../lib/auth";
 
 /**
- * Resolve the currently authenticated customer from the Better Auth session.
+ * Resolve the currently authenticated customer.
  *
  * SECURITY:
- * Cart ownership is always determined server-side from the authenticated
- * session. Never trust a userId supplied by the browser.
+ * The browser never supplies the user ID.
+ * Better Auth determines cart ownership.
  */
 async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
@@ -27,22 +25,21 @@ async function getAuthenticatedUser() {
 }
 
 /**
- * Add an authenticated customer's selected book to their persistent
- * PostgreSQL cart.
+ * Validate and synchronize one cart item with the
+ * authenticated customer's persistent PostgreSQL cart.
  *
- * The browser supplies only the book ID and requested quantity.
- * The authenticated session determines cart ownership.
- *
- * Current retail business rule:
- * - Only available books may be added.
- * - Retail cart quantity is capped at exactly 1.
+ * The server is the source of truth for:
+ * - cart ownership
+ * - book existence
+ * - book availability
+ * - quantity validation
  */
 export async function syncAndValidateCartItem(
   bookId: string,
   targetQuantity: number = 1
 ) {
   // -----------------------------------------------------------------------
-  // 1. Authenticate the request
+  // 1. Authenticate
   // -----------------------------------------------------------------------
 
   const user = await getAuthenticatedUser();
@@ -55,7 +52,22 @@ export async function syncAndValidateCartItem(
   }
 
   // -----------------------------------------------------------------------
-  // 2. Validate the book against the live database
+  // 2. Validate the requested quantity
+  // -----------------------------------------------------------------------
+
+  if (
+    !Number.isFinite(targetQuantity) ||
+    !Number.isInteger(targetQuantity) ||
+    targetQuantity < 1
+  ) {
+    return {
+      success: false,
+      message: "Invalid cart quantity.",
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // 3. Validate the book against the live database
   // -----------------------------------------------------------------------
 
   const book = await prisma.book.findUnique({
@@ -77,7 +89,7 @@ export async function syncAndValidateCartItem(
   }
 
   // -----------------------------------------------------------------------
-  // 3. Never trust availability information from the browser
+  // 4. Never trust browser availability state
   // -----------------------------------------------------------------------
 
   if (!book.available) {
@@ -88,21 +100,7 @@ export async function syncAndValidateCartItem(
   }
 
   // -----------------------------------------------------------------------
-  // 4. Enforce current retail quantity policy
-  // -----------------------------------------------------------------------
-  //
-  // The retail/dropshipping model currently allows one unit per cart item.
-  //
-  // targetQuantity remains part of the API so the action can be extended
-  // later when quantity-aware ordering is introduced.
-  //
-
-  void targetQuantity;
-
-  const verifiedQuantity = 1;
-
-  // -----------------------------------------------------------------------
-  // 5. Find or create this customer's persistent cart
+  // 5. Find or create the customer's persistent cart
   // -----------------------------------------------------------------------
 
   let cart = await prisma.cart.findUnique({
@@ -120,15 +118,8 @@ export async function syncAndValidateCartItem(
   }
 
   // -----------------------------------------------------------------------
-  // 6. Persist the book
+  // 6. Persist the ACTUAL requested quantity
   // -----------------------------------------------------------------------
-  //
-  // The compound unique constraint:
-  //
-  // cartId_bookId
-  //
-  // prevents duplicate cart rows for the same book.
-  //
 
   await prisma.cartItem.upsert({
     where: {
@@ -138,34 +129,36 @@ export async function syncAndValidateCartItem(
       },
     },
     update: {
-      quantity: verifiedQuantity,
+      quantity: targetQuantity,
     },
     create: {
       cartId: cart.id,
       bookId: book.id,
-      quantity: verifiedQuantity,
+      quantity: targetQuantity,
     },
   });
 
   // -----------------------------------------------------------------------
-  // 7. Revalidate the cart route
+  // 7. Revalidate cart and checkout
   // -----------------------------------------------------------------------
 
   revalidatePath("/cart");
+  revalidatePath("/checkout");
 
   return {
     success: true,
-    capped: false,
-    message: "Book added to your persistent cart.",
+    quantity: targetQuantity,
+    message: "Cart synchronized successfully.",
   };
 }
 
 /**
- * Remove a book from the authenticated customer's persistent database cart.
- *
- * Cart ownership comes exclusively from the Better Auth session.
+ * Remove one item from the authenticated customer's
+ * persistent database cart.
  */
-export async function removeDatabaseCartItem(bookId: string) {
+export async function removeDatabaseCartItem(
+  bookId: string
+) {
   // -----------------------------------------------------------------------
   // 1. Authenticate
   // -----------------------------------------------------------------------
@@ -191,13 +184,13 @@ export async function removeDatabaseCartItem(bookId: string) {
 
   if (!cart) {
     return {
-      success: false,
-      message: "No persistent cart was found.",
+      success: true,
+      message: "Cart is already empty.",
     };
   }
 
   // -----------------------------------------------------------------------
-  // 3. Remove the requested book
+  // 3. Delete the requested item
   // -----------------------------------------------------------------------
 
   await prisma.cartItem.deleteMany({
@@ -208,10 +201,11 @@ export async function removeDatabaseCartItem(bookId: string) {
   });
 
   // -----------------------------------------------------------------------
-  // 4. Revalidate the cart route
+  // 4. Revalidate dependent routes
   // -----------------------------------------------------------------------
 
   revalidatePath("/cart");
+  revalidatePath("/checkout");
 
   return {
     success: true,
@@ -220,18 +214,74 @@ export async function removeDatabaseCartItem(bookId: string) {
 }
 
 /**
- * Merge a guest Zustand/localStorage cart into the authenticated
- * customer's persistent PostgreSQL cart.
+ * Clear the authenticated customer's entire persistent cart.
+ */
+export async function clearDatabaseCart() {
+  // -----------------------------------------------------------------------
+  // 1. Authenticate
+  // -----------------------------------------------------------------------
+
+  const user = await getAuthenticatedUser();
+
+  if (!user) {
+    return {
+      success: false,
+      message: "You must be signed in to clear your cart.",
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // 2. Find the customer's cart
+  // -----------------------------------------------------------------------
+
+  const cart = await prisma.cart.findUnique({
+    where: {
+      userId: user.id,
+    },
+  });
+
+  // Nothing to delete is still a successful clear operation.
+  if (!cart) {
+    return {
+      success: true,
+      deleted: 0,
+    };
+  }
+
+  // -----------------------------------------------------------------------
+  // 3. Delete every cart item
+  // -----------------------------------------------------------------------
+
+  const result = await prisma.cartItem.deleteMany({
+    where: {
+      cartId: cart.id,
+    },
+  });
+
+  // -----------------------------------------------------------------------
+  // 4. Revalidate dependent routes
+  // -----------------------------------------------------------------------
+
+  revalidatePath("/cart");
+  revalidatePath("/checkout");
+
+  return {
+    success: true,
+    deleted: result.count,
+  };
+}
+
+/**
+ * Merge the guest Zustand cart into the authenticated customer's
+ * persistent PostgreSQL cart.
  *
- * SECURITY:
- * The browser supplies only book IDs and quantities.
- * The server determines the authenticated customer from Better Auth.
- *
- * Current retail business rule:
- * Every cart item is persisted with quantity = 1.
+ * Guest quantities are preserved.
  */
 export async function mergeGuestCartToDatabase(
-  guestItems: { id: string; quantity: number }[]
+  guestItems: {
+    id: string;
+    quantity: number;
+  }[]
 ) {
   // -----------------------------------------------------------------------
   // 1. Authenticate
@@ -261,7 +311,7 @@ export async function mergeGuestCartToDatabase(
   }
 
   // -----------------------------------------------------------------------
-  // 3. Find or create the authenticated customer's persistent cart
+  // 3. Find or create persistent cart
   // -----------------------------------------------------------------------
 
   let cart = await prisma.cart.findUnique({
@@ -279,16 +329,29 @@ export async function mergeGuestCartToDatabase(
   }
 
   // -----------------------------------------------------------------------
-  // 4. Validate and merge each guest item
+  // 4. Validate and merge every guest item
   // -----------------------------------------------------------------------
 
   let merged = 0;
   let skipped = 0;
 
   for (const item of guestItems) {
-    // ---------------------------------------------------------------------
-    // Validate the book against the live database
-    // ---------------------------------------------------------------------
+    // ---------------------------------------------------------------
+    // Validate quantity
+    // ---------------------------------------------------------------
+
+    if (
+      !Number.isFinite(item.quantity) ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    // ---------------------------------------------------------------
+    // Validate book
+    // ---------------------------------------------------------------
 
     const book = await prisma.book.findUnique({
       where: {
@@ -300,21 +363,14 @@ export async function mergeGuestCartToDatabase(
       },
     });
 
-    // Skip deleted or unavailable books.
     if (!book || !book.available) {
       skipped += 1;
       continue;
     }
 
-    // ---------------------------------------------------------------------
-    // Enforce the current retail quantity policy
-    // ---------------------------------------------------------------------
-
-    const verifiedQuantity = 1;
-
-    // ---------------------------------------------------------------------
-    // Persist the item
-    // ---------------------------------------------------------------------
+    // ---------------------------------------------------------------
+    // Preserve the guest quantity
+    // ---------------------------------------------------------------
 
     await prisma.cartItem.upsert({
       where: {
@@ -324,12 +380,12 @@ export async function mergeGuestCartToDatabase(
         },
       },
       update: {
-        quantity: verifiedQuantity,
+        quantity: item.quantity,
       },
       create: {
         cartId: cart.id,
         bookId: book.id,
-        quantity: verifiedQuantity,
+        quantity: item.quantity,
       },
     });
 
@@ -337,10 +393,11 @@ export async function mergeGuestCartToDatabase(
   }
 
   // -----------------------------------------------------------------------
-  // 5. Revalidate the cart route
+  // 5. Revalidate
   // -----------------------------------------------------------------------
 
   revalidatePath("/cart");
+  revalidatePath("/checkout");
 
   return {
     success: true,
@@ -348,4 +405,3 @@ export async function mergeGuestCartToDatabase(
     skipped,
   };
 }
-

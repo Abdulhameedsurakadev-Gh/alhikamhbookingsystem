@@ -10,7 +10,7 @@ export async function createBook(formData: FormData) {
     const description = formData.get("description") as string || null;
     const isbn = formData.get("isbn") as string || null;
     const price = parseFloat(formData.get("price") as string);
-    const available = formData.get("available") === "true";
+    const available = formData.has("available");
     const publisher = formData.get("publisher") as string;
     const publishedYear = formData.get("publishedYear") ? parseInt(formData.get("publishedYear") as string, 10) : null;
     const language = formData.get("language") as string || "Arabic";

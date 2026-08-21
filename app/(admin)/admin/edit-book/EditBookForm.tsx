@@ -285,8 +285,6 @@ export default function EditBookForm({ book, authors, categories, referenceBooks
             >
               <option value="KITAB_MUFRAD">Single Book (Mufrad)</option>
               <option value="MAJMUAT_MUJALLADAT">Volume Set (Majmuat)</option>
-                            <option value="KITAB_MUFRAD">Single Book (Mufrad)</option>
-              <option value="MAJMUAT_MUJALLADAT">Volume Set (Majmuat)</option>
               <option value="MAJMU">Compendium (Majmu)</option>
             </select>
           </div>

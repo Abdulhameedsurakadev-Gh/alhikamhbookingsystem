@@ -1,105 +1,287 @@
 "use server";
 
-import { CoverType, VolumeType, KnowledgeLevel, TextType, BookImageLabel } from "@prisma/client";
+import {
+  CoverType,
+  VolumeType,
+  KnowledgeLevel,
+  TextType,
+  BookImageLabel,
+} from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
-export async function updateBook(bookId: string, formData: FormData) {
+export async function updateBook(
+  bookId: string,
+  formData: FormData
+) {
   try {
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string || null;
-    const isbn = formData.get("isbn") as string || null;
-    const price = parseFloat(formData.get("price") as string);
-    const publisher = formData.get("publisher") as string;
-    const publishedYear = formData.get("publishedYear") ? parseInt(formData.get("publishedYear") as string, 10) : null;
-    const language = formData.get("language") as string || "Arabic";
-    const weight = formData.get("weight") ? parseFloat(formData.get("weight") as string) : null;
-    const authorId = formData.get("authorId") as string;
-    const categoryId = formData.get("categoryId") as string;
-    const volumeCount = parseInt(formData.get("volumeCount") as string, 10) || 1;
-    const explainsBookId = formData.get("explainsBookId") as string || null;
-    const tableOfContents = formData.get("tableOfContents") as string || null;
+    const title =
+      (formData.get("title") as string | null)?.trim() || "";
 
-    const coverType = formData.get("coverType") as CoverType;
-    const volumeType = formData.get("volumeType") as VolumeType;
-    const knowledgeLevel = formData.get("knowledgeLevel") as KnowledgeLevel;
-    const textType = formData.get("textType") as TextType;
+    const description =
+      (formData.get("description") as string | null)?.trim() || null;
 
-    // 1. Verify existence of the targeted manuscript record
+    const isbn =
+      (formData.get("isbn") as string | null)?.trim() || null;
+
+    const price = parseFloat(
+      (formData.get("price") as string) || ""
+    );
+
+    const publisher =
+      (formData.get("publisher") as string | null)?.trim() || "";
+
+    const publishedYearValue =
+      (formData.get("publishedYear") as string | null)?.trim() || "";
+
+    const publishedYear = publishedYearValue
+      ? parseInt(publishedYearValue, 10)
+      : null;
+
+    const language =
+      (formData.get("language") as string | null)?.trim() ||
+      "Arabic";
+
+    const weightValue =
+      (formData.get("weight") as string | null)?.trim() || "";
+
+    const weight = weightValue
+      ? parseFloat(weightValue)
+      : null;
+
+    const authorId =
+      (formData.get("authorId") as string | null)?.trim() || "";
+
+    const categoryId =
+      (formData.get("categoryId") as string | null)?.trim() || "";
+
+    const volumeCountValue =
+      (formData.get("volumeCount") as string | null)?.trim() || "";
+
+    const volumeCount =
+      parseInt(volumeCountValue, 10) || 1;
+
+    const explainsBookId =
+      (formData.get("explainsBookId") as string | null)?.trim() ||
+      null;
+
+    const tableOfContents =
+      (formData.get("tableOfContents") as string | null)?.trim() ||
+      null;
+
+    const coverType =
+      formData.get("coverType") as CoverType;
+
+    const volumeType =
+      formData.get("volumeType") as VolumeType;
+
+    const knowledgeLevel =
+      formData.get("knowledgeLevel") as KnowledgeLevel;
+
+    const textType =
+      formData.get("textType") as TextType;
+
+    /*
+     * ------------------------------------------------------------
+     * VALIDATION
+     * ------------------------------------------------------------
+     */
+
+    if (
+      !title ||
+      !publisher ||
+      !authorId ||
+      !categoryId ||
+      Number.isNaN(price)
+    ) {
+      return {
+        success: false,
+        error: "Missing or invalid required fields.",
+      };
+    }
+
+    if (price < 0) {
+      return {
+        success: false,
+        error: "Price cannot be negative.",
+      };
+    }
+
+    if (weight !== null && Number.isNaN(weight)) {
+      return {
+        success: false,
+        error: "Weight must be a valid number.",
+      };
+    }
+
+    if (publishedYear !== null && Number.isNaN(publishedYear)) {
+      return {
+        success: false,
+        error: "Published year must be a valid number.",
+      };
+    }
+
+    if (volumeCount < 1) {
+      return {
+        success: false,
+        error: "Volume count must be at least 1.",
+      };
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * FETCH EXISTING BOOK
+     * ------------------------------------------------------------
+     */
+
     const existingBook = await prisma.book.findUnique({
-      where: { id: bookId },
-      include: { images: true }
-    });
-
-    if (!existingBook) {
-      return { success: false, error: "Target manuscript record not found" };
-    }
-
-    if (!title || isNaN(price) || !publisher || !authorId || !categoryId) {
-      return { success: false, error: "Missing or invalid required fields" };
-    }
-
-    // 2. Capture dynamic text URL inputs directly from the form fields
-    const coverUrlInput = formData.get("coverImageUrl") as string | null;
-    const insideUrlInput = formData.get("insideImageUrl") as string | null;
-
-    // Fallback to old strings if fields are left entirely empty
-    const finalCoverUrl = coverUrlInput && coverUrlInput.trim() !== "" 
-      ? coverUrlInput.trim() 
-      : existingBook.coverImage;
-
-    const finalPreviewUrl = insideUrlInput && insideUrlInput.trim() !== "" 
-      ? insideUrlInput.trim() 
-      : existingBook.images.find(img => img.label === BookImageLabel.SAMPLE_PAGE)?.imageUrl || null;
-
-    // 3. Update primary core database entry fields
-    await prisma.book.update({
-      where: { id: bookId },
-      data: {
-        title,
-        description,
-        isbn,
-        price,
-        publisher,
-        publishedYear,
-        language,
-        weight,
-        tableOfContents,
-        coverImage: finalCoverUrl,
-        authorId,
-        categoryId,
-        coverType,
-        volumeType,
-        volumeCount,
-        knowledgeLevel,
-        textType,
-        explainsBookId: explainsBookId || null,
+      where: {
+        id: bookId,
+      },
+      include: {
+        images: true,
       },
     });
 
-    // 4. Overwrite secondary sub-relation preview lines cleanly inside table
-    await prisma.bookImage.deleteMany({
-      where: { bookId, label: BookImageLabel.SAMPLE_PAGE }
-    });
-
-    if (finalPreviewUrl) {
-      await prisma.bookImage.create({
-        data: {
-          bookId,
-          imageUrl: finalPreviewUrl,
-          label: BookImageLabel.SAMPLE_PAGE,
-          sortOrder: 1
-        }
-      });
+    if (!existingBook) {
+      return {
+        success: false,
+        error: "Target manuscript record was not found.",
+      };
     }
 
-    // 5. Purge server runtime route caches instantly
+    /*
+     * ------------------------------------------------------------
+     * IMAGE URL HANDLING
+     *
+     * Empty replacement fields mean:
+     * "Keep the existing image."
+     * ------------------------------------------------------------
+     */
+
+    const coverUrlInput = (
+      formData.get("coverImageUrl") as string | null
+    )?.trim();
+
+    const insideUrlInput = (
+      formData.get("insideImageUrl") as string | null
+    )?.trim();
+
+    const existingPreview =
+      existingBook.images.find(
+        (image) =>
+          image.label === BookImageLabel.SAMPLE_PAGE
+      );
+
+    const finalCoverUrl =
+      coverUrlInput || existingBook.coverImage || null;
+
+    const finalPreviewUrl =
+      insideUrlInput ||
+      existingPreview?.imageUrl ||
+      null;
+
+    /*
+     * ------------------------------------------------------------
+     * DATABASE TRANSACTION
+     *
+     * Book update + preview image update happen together.
+     * ------------------------------------------------------------
+     */
+
+    await prisma.$transaction(async (tx) => {
+      /*
+       * Update primary book record
+       */
+      await tx.book.update({
+        where: {
+          id: bookId,
+        },
+
+        data: {
+          title,
+          description,
+          isbn,
+          price,
+          publisher,
+          publishedYear,
+          language,
+          weight,
+          tableOfContents,
+
+          coverImage: finalCoverUrl,
+
+          authorId,
+          categoryId,
+
+          coverType,
+          volumeType,
+          volumeCount,
+          knowledgeLevel,
+          textType,
+
+          explainsBookId,
+        },
+      });
+
+      /*
+       * Only replace the SAMPLE_PAGE image when
+       * the submitted URL is different from the current one.
+       */
+      if (
+        insideUrlInput &&
+        insideUrlInput !== existingPreview?.imageUrl
+      ) {
+        await tx.bookImage.deleteMany({
+          where: {
+            bookId,
+            label: BookImageLabel.SAMPLE_PAGE,
+          },
+        });
+
+        await tx.bookImage.create({
+          data: {
+            bookId,
+            imageUrl: insideUrlInput,
+            label: BookImageLabel.SAMPLE_PAGE,
+            sortOrder: 1,
+          },
+        });
+      }
+    });
+
+    /*
+     * ------------------------------------------------------------
+     * CACHE REVALIDATION
+     * ------------------------------------------------------------
+     */
+
     revalidatePath("/admin");
     revalidatePath("/admin/manage-inventory");
-    
-    return { success: true, message: "Manuscript text URLs updated successfully!" };
-  } catch (error: any) {
-    console.error("Critical error running edit text transaction:", error);
-    return { success: false, error: error.message || "Failed to finalize database asset values." };
+    revalidatePath("/admin/manage-inventory/edit-book");
+
+    /*
+     * Revalidate the public book/catalog pages as well.
+     */
+    revalidatePath("/books");
+    revalidatePath(`/books/${bookId}`);
+
+    return {
+      success: true,
+      message: "Manuscript updated successfully.",
+    };
+  } catch (error) {
+    console.error(
+      "Critical error updating manuscript:",
+      error
+    );
+
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update manuscript.",
+    };
   }
 }

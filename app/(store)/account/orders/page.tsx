@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "../../../../lib/prisma";
 import { auth } from "../../../../lib/auth";
+import { formatOrderNumber } from "../../../../lib/order-number";
 import { OrderStatus } from "@prisma/client";
 import {
   ClipboardList,
@@ -76,7 +77,7 @@ export default async function AccountOrdersPage({
     },
   });
 
-  const getBadgeClasses = (status: string): string => {
+  const getBadgeClasses = (status: OrderStatus): string => {
     switch (status) {
       case "PAID":
       case "SHIPPED":
@@ -177,6 +178,8 @@ export default async function AccountOrdersPage({
               day: "numeric",
             });
 
+            const orderNumber = formatOrderNumber(order.id);
+
             return (
               <div
                 key={order.id}
@@ -185,8 +188,11 @@ export default async function AccountOrdersPage({
                 {/* Top Section */}
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-[11px] sm:text-xs text-foreground break-all">
-                      Order #{order.id.substring(0, 8).toUpperCase()}
+                    <span
+                      className="font-bold text-[11px] sm:text-xs text-foreground break-all"
+                      title={order.id}
+                    >
+                      Order #{orderNumber}
                     </span>
 
                     <span
@@ -257,3 +263,4 @@ export default async function AccountOrdersPage({
     </div>
   );
 }
+

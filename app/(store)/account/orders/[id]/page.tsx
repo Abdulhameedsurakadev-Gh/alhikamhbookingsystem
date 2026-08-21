@@ -1,9 +1,11 @@
 // app/account/orders/[id]/page.tsx
+
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "../../../../../lib/prisma";
 import { auth } from "../../../../../lib/auth";
+import { formatOrderNumber } from "../../../../../lib/order-number";
 import {
   Calendar,
   MapPin,
@@ -54,6 +56,15 @@ export default async function OrderDetailPage({
   if (!order || order.userId !== session.user.id) {
     notFound();
   }
+
+  /*
+   * IMPORTANT:
+   * The UUID remains the database identifier.
+   * The formatted order number is the human-facing identifier
+   * that the customer and admin should use when referring to
+   * this order.
+   */
+  const orderNumber = formatOrderNumber(order.id);
 
   const firstBook = order.orderItems[0]?.book;
 
@@ -118,7 +129,7 @@ export default async function OrderDetailPage({
             </Link>
 
             <h1 className="font-serif text-heading font-extrabold text-foreground tracking-tight break-words">
-              Order #{order.id.substring(0, 12).toUpperCase()}
+              Order #{orderNumber}
             </h1>
 
             <p className="text-[11px] sm:text-xs text-muted-foreground font-medium flex flex-wrap items-center gap-1 mt-1">
@@ -394,3 +405,4 @@ export default async function OrderDetailPage({
     </div>
   );
 }
+
